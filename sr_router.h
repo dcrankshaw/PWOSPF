@@ -67,6 +67,8 @@ struct sr_instance
     /* -- pwospf subsystem -- */
     struct pwospf_subsys* ospf_subsys;
     
+    /* NEEDED FOR PWOSPF -mad */
+    uint32_t routerID;
 };
 
 /* -----------------------------------------------------------------------
