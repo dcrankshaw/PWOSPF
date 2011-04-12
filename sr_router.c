@@ -33,6 +33,8 @@
 #include "icmp.h"
 #include "arp.h"
 #include "buffer.h"
+#include "sr_pwospf.h"
+#include "pwospf_protocol.h"
 
 #define DEF_RULE_TABLE "rules"
 #define IFACE_CONFIG	"if_config"
@@ -62,6 +64,7 @@ void sr_init(struct sr_instance* sr)
 	char *if_config = IFACE_CONFIG;
 	assert(init_if_config(sr, if_config));
 	print_if_config(sr);
+	pwospf_init(sr);
 	
 	
 	printf("\n\n");

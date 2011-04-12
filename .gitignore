@@ -1,0 +1,5 @@
+*.d
+.DS_STORE
+sr
+*.o
+packetlog
