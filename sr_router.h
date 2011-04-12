@@ -35,6 +35,8 @@
 struct sr_if;
 struct sr_rt;
 
+struct pwospf_subsys;
+
 /* ----------------------------------------------------------------------------
  * struct sr_instance
  *
@@ -61,6 +63,10 @@ struct sr_instance
     int ft_size;
     struct if_cat_list* inter;
     struct if_cat_list* exter;
+    
+    /* -- pwospf subsystem -- */
+    struct pwospf_subsys* ospf_subsys;
+    
 };
 
 /* -----------------------------------------------------------------------

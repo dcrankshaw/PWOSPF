@@ -13,34 +13,31 @@ CC = gcc
 
 OSTYPE = $(shell uname)
 
-ifeq ($(OSTYPE),CYGWIN_NT-5.1)
-ARCH = -D_CYGWIN_
-endif
-
 ifeq ($(OSTYPE),Linux)
 ARCH = -D_LINUX_
-SOCK = -lnsl -lresolv
+SOCK = -lnsl
 endif
 
 ifeq ($(OSTYPE),SunOS)
 ARCH =  -D_SOLARIS_
-SOCK = -lnsl -lsocket -lresolv
+SOCK = -lnsl -lsocket
 endif
 
 ifeq ($(OSTYPE),Darwin)
 ARCH = -D_DARWIN_
-SOCK = -lresolv
+SOCK =
 endif
 
 CFLAGS = -g -Wall -std=gnu99 -D_DEBUG_ $(ARCH)
 
-LIBS= $(SOCK) -lm
+LIBS= $(SOCK) -lm -lresolv -lpthread
 PFLAGS= -follow-child-processes=yes -cache-dir=/tmp/${USER}
 PURIFY= purify ${PFLAGS}
 
 sr_SRCS = sr_router.c sr_main.c  \
           sr_if.c sr_rt.c sr_vns_comm.c   \
-          sr_dumper.c sha1.c icmp.c arp.c buffer.c fw.c
+          sr_dumper.c sha1.c sr_pwospf.c   \
+          icmp.c arp.c buffer.c fw.c
 
 sr_OBJS = $(patsubst %.c,%.o,$(sr_SRCS))
 sr_DEPS = $(patsubst %.c,.%.d,$(sr_SRCS))
@@ -68,11 +65,11 @@ clean-deps:
 	rm -f .*.d
 
 dist-clean: clean clean-deps
-	rm -f .*.swp sr_stub.tar.gz
+	rm -f .*.swp pwospf_stub.tar.gz
 
 dist: dist-clean
-	(cd ..; tar -X stub/exclude -cvf sr_stub.tar stub/; gzip sr_stub.tar); \
-    mv ../sr_stub.tar.gz .
+	(cd ..; tar -X pwospf_stub/exclude -cvf pwospf_stub.tar pwospf_stub/; gzip pwospf_stub.tar); \
+    mv ../pwospf_stub.tar.gz .
 
 tags:
 	ctags *.c
