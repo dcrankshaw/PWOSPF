@@ -25,15 +25,13 @@ INTERFACE LIST NEEDS TO BE INITIALIZED WITH THE THREE INTERFACES
 */
 
 /*******************************************************************
-*
 *   Called when handle_packet() receives a HELLO packet.
-*
 ********************************************************************/
 void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 {
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;
-	struct interface_list_entry* iface = 0;
+	struct interface_list_entry* iface = ps->sr->interface_list;
 
 	if(ps->len < (sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr))) /* incorrectly sized packet */
 	{
@@ -44,7 +42,7 @@ void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 	{
 		pwospf_hdr = (struct ospfv2_hdr*)(ps->packet);
 		hello_hdr = (struct ospfv2_hello_hdr*)(ps->packet + sizeof(struct ospfv2_hdr));  /* HOW TO START THIS AT MEMORY LOCATION OF THE SECOND HALF OF THE HEADER???? */
-		
+
 		/* check incoming packet values against ONLY the receiving interface in the interface list */
 		if(iface == 0)
 		{
@@ -70,24 +68,92 @@ void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 					iface->nghbrs = (struct neighbor_list_entry*) malloc(sizeof(struct neighbor_list_entry));
 					assert(iface->nghbrs);
 					iface->nghbrs->next = 0;
+					iface->nghbrs->ip_add = pwospf_hdr->rid;
 					iface->nghbrs->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 				}
-				else
+				else /* add to end of iface->nghbrs (end of neighbor_list_walker) */
 				{
 					neighbor_list_walker = iface->nghbrs;
 					while(neighbor_list_walker != NULL)
 					{
-						/* TODO -  packet matches entry, update the 'last hello packet received timer' */
+						if(neighbor_list_walker->ip_add == pwospf_hdr->rid)
+						{
+							neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
+							return;
+						}
+						if(neighbor_list_walker->timenotvalid < time(NULL))
+						{
+							neighbor_list_walker = delete_neighbor_list_entry(iface, neighbor_list_walker);
+						}
 						
 						neighbor_list_walker = neighbor_list_walker->next;
 					}
-					/* no matching neigbor found - add new neighbor */
+					/* no matching neighbor found - add new neighbor */
+					neighbor_list_walker->next = (struct neighbor_list_entry*) malloc(sizeof(struct neighbor_list_entry));
+					assert(neighbor_list_walker->next);
+					neighbor_list_walker = neighbor_list_walker->next;
+					neighbor_list_walker->next = 0;
+					neighbor_list_walker->ip_add = pwospf_hdr->rid;
+					neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 				}
 			}
 			iface = iface->next;
 		}
 	}
 	return;
+}
+
+/*******************************************************************
+*   Deletes a neigbor_list_entry from nghbrs.
+*******************************************************************/
+struct neighbor_list_entry* delete_neighbor_list_entry(struct interface_list_entry* iface, struct neighbor_list_entry* want_deleted)
+{
+	struct neighbor_list_entry* prev = 0;
+	struct neighbor_list_entry* walker = 0;
+	walker = iface->nghbrs;
+	
+	while(walker)
+	{
+		if(walker == want_deleted)    /* On item to be deleted in list. */
+		{
+			if(prev == 0)          /* Item is first in list. */  
+			{
+				if(iface->nghbrs->next)
+				{
+					iface->nghbrs = iface->nghbrs->next;
+				}	
+				else
+				{
+					iface->nghbrs = NULL;
+				}
+				break;
+			}
+			else if(!walker->next) /* Item is last in list. */
+			{
+				prev->next = NULL;
+				break;
+			}
+			else                    /* Item is in the middle of list. */
+			{
+				prev->next = walker->next;
+				break;
+			}
+		}
+		else
+		{
+			prev = walker;
+			walker = walker->next;
+		}
+	}
+	
+	/* Walker is still on item to be deleted so free that item. */
+	if(walker)
+		free(walker);
+		
+	/*Return next item in list after deleted item. */
+	if(prev != NULL)
+		return prev->next;
+	return NULL;
 }
 
 /*******************************************************************
@@ -134,4 +200,12 @@ void print_neighbor_list_entry(struct neighbor_list_entry* ent)
 	ip_addr.s_addr = ent->ip_add;
 	printf("IP: %s\t", inet_ntoa(ip_addr));
 	printf("Time when Invalid: %lu\n",(long)ent->timenotvalid);
+}
+
+/*******************************************************************
+*   Creates and returns a HELLO packet.
+*******************************************************************/
+void create_HELLO()
+{
+
 }
