@@ -69,6 +69,7 @@ struct sr_instance
     
     /* NEEDED FOR PWOSPF -mad */
     uint32_t routerID;
+    //struct lsu_info lsu;
 };
 
 /* -----------------------------------------------------------------------
