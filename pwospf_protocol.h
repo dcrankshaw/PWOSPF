@@ -60,11 +60,12 @@ struct ospfv2_lsu_hdr
     uint32_t num_adv;  /* number of advertisements */
 }__attribute__ ((packed));
 
-struct ospfv2_lsu
+struct ospfv2_lsu_adv
 {
     uint32_t subnet; /* -- link subnet -- */
     uint32_t mask;   /* -- link subnet mask -- */
     uint32_t rid;    /* -- attached router id (if any) -- */
+    struct ospfv2_lsu_adv* next;
 }__attribute__ ((packed));
 
 
