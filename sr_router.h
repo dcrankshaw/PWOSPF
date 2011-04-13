@@ -66,7 +66,8 @@ struct sr_instance
     
     /* -- pwospf subsystem -- */
     struct pwospf_subsys* ospf_subsys;
-    
+
+    struct interface_list_entry* interface_list;
 };
 
 /* -----------------------------------------------------------------------

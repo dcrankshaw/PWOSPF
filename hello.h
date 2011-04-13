@@ -14,7 +14,7 @@
 #include "sr_if.h"
 #include "sr_rt.h"
 #include "sr_protocol.h"
-/* #include "pwospf_protocol.h" WAIT UNTIL THIS COMPILES PROPERLY*/
+#include "pwospf_protocol.h"
 
 struct interface_list_entry
 {
@@ -24,7 +24,7 @@ struct interface_list_entry
     uint16_t helloint;
     unsigned char mac[ETHER_ADDR_LEN];
     time_t timenotvalid;                /*The time when this entry is no longer valid*/
-    struct neigbor_list_entry* nghbrs;
+    struct neighbor_list_entry* nghbrs;
     struct interface_list_entry* next;
 };
 
@@ -37,6 +37,6 @@ struct neighbor_list_entry
 
 void handle_HELLO(struct packet_state*, struct sr_ethernet_hdr*);
 void print_all_neighbor_lists(struct sr_instance*);
-void print_neigbor_list_entry(struct neigbor_list_entry*);
+void print_neighbor_list_entry(struct neighbor_list_entry*);
 
 #endif
