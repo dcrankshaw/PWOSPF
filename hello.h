@@ -16,6 +16,8 @@
 #include "sr_protocol.h"
 #include "pwospf_protocol.h"
 
+#define ALLSPFRouters 0xe0000005
+
 struct interface_list_entry
 {
     char* interface;
@@ -38,6 +40,6 @@ void handle_HELLO(struct packet_state*, struct sr_ethernet_hdr*);
 struct neighbor_list_entry* delete_neighbor_list_entry(struct interface_list_entry*, struct neighbor_list_entry*);
 void print_all_neighbor_lists(struct sr_instance*);
 void print_neighbor_list_entry(struct neighbor_list_entry*);
-void create_HELLO();
+void send_HELLO(struct packet_state*);
 
 #endif
