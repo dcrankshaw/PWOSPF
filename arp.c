@@ -150,10 +150,10 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 *   Searches cache for entry based on IP address. Deletes any entries past expiration time. Returns 
 *   matching entry.
 *******************************************************************/
-struct arp_cache_entry* search_cache(struct packet_state* ps,const uint32_t ip)
+struct arp_cache_entry* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
 	struct arp_cache_entry* cache_walker=0;
-	cache_walker=ps->sr->arp_cache;
+	cache_walker=sr->arp_cache;
 	while(cache_walker) 
 	{
 	    time_t curr_time=time(NULL);
@@ -166,7 +166,7 @@ struct arp_cache_entry* search_cache(struct packet_state* ps,const uint32_t ip)
 		}
 		else                                        /*If the ARP entry has expired, delete. */
 		{
-			cache_walker = delete_entry(ps, cache_walker);
+			cache_walker = delete_entry(sr, cache_walker);
 		}
 	}
 	
@@ -177,11 +177,11 @@ struct arp_cache_entry* search_cache(struct packet_state* ps,const uint32_t ip)
 /*******************************************************************
 *   Deletes entry from cache.
 *******************************************************************/
-struct arp_cache_entry* delete_entry(struct packet_state* ps, struct arp_cache_entry* want_deleted)
+struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_entry* want_deleted)
 {
 	struct arp_cache_entry* prev=0;
 	struct arp_cache_entry* walker=0;
-	walker=ps->sr->arp_cache;
+	walker=sr->arp_cache;
 	
 	while(walker)
 	{
@@ -189,13 +189,13 @@ struct arp_cache_entry* delete_entry(struct packet_state* ps, struct arp_cache_e
 		{
 			if(prev==0)             /* Item is first in cache. */  
 			{
-				if(ps->sr->arp_cache->next)
+				if(sr->arp_cache->next)
 				{
-					ps->sr->arp_cache=ps->sr->arp_cache->next;
+					sr->arp_cache=ps->sr->arp_cache->next;
 				}	
 				else
 				{
-					ps->sr->arp_cache = NULL;
+					sr->arp_cache = NULL;
 				}
 				break;
 			}

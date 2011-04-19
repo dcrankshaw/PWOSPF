@@ -214,7 +214,7 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 		return 1;
 		
 	}
-	struct arp_cache_entry *ent = search_cache(ps, ps->rt_entry->gw.s_addr);
+	struct arp_cache_entry *ent = search_cache(ps->sr, ps->rt_entry->gw.s_addr);
 	if(ent != NULL)
 	{
 		struct sr_ethernet_hdr *eth = (struct sr_ethernet_hdr *) newpacket;

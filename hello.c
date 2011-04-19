@@ -20,7 +20,8 @@
 **************** GOES IN sr_init() IN sr_router.c *********************
 
 interface_list_entry* interface_list;
-INTERFACE LIST NEEDS TO BE INITIALIZED WITH THE THREE INTERFACES
+INTERFACE LIST NEEDS TO BE INITIALIZED WITH THE THREE INTERFACES:
+Including their IP address, netmask, and MAC address
 
 */
 
@@ -52,7 +53,6 @@ void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 		{
 			if(iface->interface == ps->interface) /* if the current interface equals the incoming interface */
 			{
-				/* WHERE IS THE INTERFACE'S helloint VARIABLE USED???? */
 				if((iface->nmask != hello_hdr->nmask) || (iface->helloint != hello_hdr->helloint))
 				{
 					/* drop packet */
@@ -203,9 +203,70 @@ void print_neighbor_list_entry(struct neighbor_list_entry* ent)
 }
 
 /*******************************************************************
-*   Creates and returns a HELLO packet.
+*   Creates and sends a HELLO packet with Ethernet, IP, OSPF, and OSPF_HELLO headers.
 *******************************************************************/
-void create_HELLO()
+void send_HELLO(struct packet_state* ps)
 {
+	unsigned int packet_size = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr);
+	uint8_t* outgoing_packet_buffer = malloc(packet_size);
+	struct sr_ethernet_hdr* eth_hdr = (struct sr_ethernet_hdr*) outgoing_packet_buffer;
+	struct ip* ip_hdr = (struct ip*) outgoing_packet_buffer + sizeof(struct sr_ethernet_hdr);
+	struct ospfv2_hdr* pwospf_hdr = (struct ospfv2_hdr*) outgoing_packet_buffer + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip);
+	struct ospfv2_hello_hdr* hello_hdr = (struct ospfv2_hello_hdr*) outgoing_packet_buffer + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct ospfv2_hdr);
+	
+	/* Set Ethernet destination MAC address to ff:ff:ff:ff:ff:ff (Broadcast) */
+	int i = 0;
+	for(i=0; i<ETHER_ADDR_LEN; i++)
+	{
+		eth_hdr->ether_dhost[i] = 0xff;
+	}
+	for(i=0; i<ETHER_ADDR_LEN; i++)
+	{
+		eth_hdr->ether_shost[i] = 0x00; /* ??????????????? */
+	}
+	eth_hdr->ether_type=htons(ETHERTYPE_IP);
 
+	/* Set IP destination IP address to 224.0.0.5 (0xe0000005) (Broadcast) */
+	ip_hdr->ip_tos = 0; /* ??????????????????????? */
+	ip_hdr->ip_len = packet_size - sizeof(struct sr_ethernet_hdr);
+	ip_hdr->ip_id = 0; /* ?????????????????????? */
+	ip_hdr->ip_off = 0; /* ?????????????????????*/
+	ip_hdr->ip_ttl = INIT_TTL;
+	ip_hdr->ip_p = IPPROTO_TCP; /* ???????????? */
+	ip_hdr->ip_sum = 0;
+	ip_hdr->ip_sum = cksum((uint8_t *)ip_hdr, sizeof(struct ip));
+	ip_hdr->ip_sum = htons(ip_hdr->ip_sum);
+	ip_hdr->ip_src.s_addr = 0x00000000; /* ~~~~~~ interface specific: set in while loop below ~~~~~~~~ */
+	ip_hdr->ip_dst.s_addr = ALLSPFRouters; /* CHECK THIS ????????????? */
+
+	/* Set up PWOSPF header. */
+	pwospf_hdr->version = OSPF_V2;
+	pwospf_hdr->type = OSPF_TYPE_HELLO;
+	pwospf_hdr->len = sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr);
+	pwospf_hdr->rid = 0; /* ????????????? */
+	pwospf_hdr->aid = 0; /* ????????????? */
+	pwospf_hdr->csum = 0; /* ????????????? */
+	pwospf_hdr->csum = cksum((uint8_t *)pwospf_hdr, sizeof(struct ospfv2_hdr)-64); /* Minus 64 to exclude the authentication field. */
+	pwospf_hdr->csum = htons(pwospf_hdr->csum);
+	pwospf_hdr->autype = OSPF_DEFAULT_AUTHKEY;
+	pwospf_hdr->audata = OSPF_DEFAULT_AUTHKEY;
+
+	/* Set up HELLO header. */
+	hello_hdr->nmask = 0; /* ~~~~~~ inteface specific: set in while loop below ~~~~~~~ */
+	hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
+	hello_hdr->padding = 0; /* ?????????? */
+
+	/* Send the packet out on each interface. */
+	struct interface_list_entry* iface = ps->sr->interface_list;
+	assert(iface);
+	while(iface)
+	{
+		ip_hdr->ip_src.s_addr = iface->ip_add; /* CHECK THIS ????????????? */
+		hello_hdr->nmask = iface->nmask;
+		sr_send_packet(ps->sr, outgoing_packet_buffer, packet_size, iface->interface);
+		iface = iface->next;
+	}
+
+	if(outgoing_packet_buffer)
+		free(outgoing_packet_buffer);
 }

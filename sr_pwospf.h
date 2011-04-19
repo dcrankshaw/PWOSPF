@@ -18,7 +18,6 @@
 struct sr_instance;
 
 
-
 struct route
 {
 	uint32_t prefix;
@@ -92,8 +91,9 @@ struct pwospf_subsys
     /* -- pwospf subsystem state variables here -- */
     struct adj_list *network;
     struct ftable_entry *fwrd_table;
-    struct *pwospf_iflist neighbors;
+    struct pwospf_iflist* neighbors;
     struct router *this_router;
+    uint16_t last_seq_sent;
 
 
     /* -- thread and single lock for pwospf subsystem -- */

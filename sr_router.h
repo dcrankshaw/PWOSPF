@@ -68,9 +68,8 @@ struct sr_instance
     struct pwospf_subsys* ospf_subsys;
 
     /* NEEDED FOR PWOSPF -mad */
-    uint32_t routerID;
-    //struct lsu_info lsu;
-
+    uint32_t router_id;
+    
     /* NEEDED FOR PWOSPF -Adam */
     struct interface_list_entry* interface_list;
 };

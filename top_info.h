@@ -32,7 +32,4 @@ int reset_ftable(struct sr_instance *);
 void dijkstra(struct sr_instance*, struct router *);
 struct router* get_smallest_unknown(struct adj_list *);
 
-
-
-
 #endif

@@ -4,6 +4,7 @@
 #define INIT_ADJLIST_SIZE	10
 #define INIT_SUBNET_SIZE	10
 
+
 int remove_neighbor()
 {
 	/*
@@ -12,7 +13,6 @@ int remove_neighbor()
 	*/
 	
 }
-
 
 
 
