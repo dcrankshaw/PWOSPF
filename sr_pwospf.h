@@ -71,10 +71,11 @@ struct ftable_entry
 
 struct pwospf_iflist
 {
+	char name[sr_IFACE_NAMELEN];
 	struct in_addr address;
 	struct in_addr mask;
-	char name[sr_IFACE_NAMELEN];
 	uint16_t helloint;
+	unsigned char mac[ETHER_ADDR_LEN];
 	struct neighbor_list *neighbors;
 	struct pwospf_iflist *next;
 };
@@ -83,6 +84,7 @@ struct neighbor_list
 {
 	uint32_t id;
 	struct in_addr ip_address;
+	time_t timenotvalid;                /*The time when this entry is no longer valid*/
 	struct neighbor_list *next;
 };
 
