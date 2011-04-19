@@ -20,7 +20,7 @@ struct sr_instance;
 
 struct neighbor_list
 {
-	uint32_t id;
+	uint32_t id; /*Router ID*/
 	struct in_addr ip_address;
 	struct neighbor_list *next;
 };
@@ -43,6 +43,8 @@ typedef struct router
 	int list_size;	/* number of entries in the list (list_size <= buf_size at all times) */
 	
 	struct route **subnets;
+	int subnet_buf_size;
+	int subnet_size;
 	uint16_t last_seq;
 	
 	uint32_t rid;
@@ -86,8 +88,9 @@ struct pwospf_subsys
     /* -- pwospf subsystem state variables here -- */
     struct adj_list *network;
     struct ftable_entry *fwrd_table;
-    struct *pwospf_iflist neighbors;
+    struct pwospf_iflist* neighbors;
     struct router *this_router;
+    uint16_t last_seq_sent;
 
 
     /* -- thread and single lock for pwospf subsystem -- */

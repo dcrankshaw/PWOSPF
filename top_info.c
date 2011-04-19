@@ -2,7 +2,18 @@
 
 
 
-
+struct router* get_router(uint32_t router_id, struct sr_instance* sr)
+{
+    strcut adj_list* net_walker=sr->pwospf_subsys->network;
+    while(net_walker)
+    {
+        if(net_walker->rt->r_id==router_id)
+            return net_walker->rt;
+        else
+            net_walker=net_walker->next;
+    }
+    return NULL;
+}
 
 
 void add_neighbor(struct sr_instance* sr, struct sr_if *iface, uint32_t router_id)

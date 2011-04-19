@@ -78,7 +78,15 @@
 /*
  * Structure of an internet header, naked of options.
  */
-struct ip
+ 
+ #ifndef IP_VERSION
+ #define IP_VERSION     4
+ #endif 
+ 
+ #ifndef ROUTINE_SERVICE
+ #define ROUTINE_SERVICE    0
+ #endif 
+ struct ip
   {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     unsigned int ip_hl:4;		/* header length */
@@ -87,7 +95,7 @@ struct ip
     unsigned int ip_v:4;		/* version */
     unsigned int ip_hl:4;		/* header length */
 #else
-#error "Byte ordering ot specified " 
+#error "Byte ordering not specified " 
 #endif 
     uint8_t ip_tos;			/* type of service */
     uint16_t ip_len;			/* total length */
@@ -119,6 +127,10 @@ struct sr_ethernet_hdr
 
 #ifndef ARPHDR_ETHER
 #define ARPHDR_ETHER    1
+#endif
+
+#ifndef OSPFV2_TYPE      
+#define OSPFV2_TYPE     89
 #endif
 
 #ifndef ICMPT_ECHOREPLY
