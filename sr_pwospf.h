@@ -18,12 +18,6 @@
 struct sr_instance;
 
 
-struct neighbor_list
-{
-	uint32_t id;
-	struct in_addr ip_address;
-	struct neighbor_list *next;
-};
 
 struct route
 {
@@ -35,15 +29,18 @@ struct route
 };
 
 
-typedef struct router
+struct router
 {
 	struct router **adjacencies;
 	
-	int buf_size;	/* length of the dynamically allocated array, to prevent illegal mem access */
-	int list_size;	/* number of entries in the list (list_size <= buf_size at all times) */
+	int adj_buf_size;	/* length of the dynamically allocated array, to prevent illegal mem access */
+	int adj_size;	/* number of entries in the list (list_size <= buf_size at all times) */
 	
 	struct route **subnets;
+	int subnet_buf_size;
+	int subnet_size;
 	uint16_t last_seq;
+	time_t expired;
 	
 	uint32_t rid;
 	
@@ -51,7 +48,7 @@ typedef struct router
 	int known;
 	int dist;
 	struct router *prev;
-} node;
+};
 
 struct adj_list
 {
@@ -63,23 +60,32 @@ struct adj_list
 /*TODO: make sure this is the right way to define an entry in the forwarding table*/
 struct ftable_entry
 {
-	struct ftable_entry *next;
-	struct in_addr subnet; /*aka dest */
+	
+	struct in_addr prefix; /*aka dest */
 	struct in_addr mask;
 	struct in_addr next_hop;
-	char *interface;	/*the interface to send the packet out of*/
+	char interface[sr_IFACE_NAMELEN];	/*the interface to send the packet out of*/
+	int num_hops;
+	
+	struct ftable_entry *next;
 };
 
 struct pwospf_iflist
 {
 	struct in_addr address;
 	struct in_addr mask;
+	char name[sr_IFACE_NAMELEN];
 	uint16_t helloint;
 	struct neighbor_list *neighbors;
+	struct pwospf_iflist *next;
 };
 
-
-
+struct neighbor_list
+{
+	uint32_t id;
+	struct in_addr ip_address;
+	struct neighbor_list *next;
+};
 
 struct pwospf_subsys
 {
