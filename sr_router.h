@@ -15,6 +15,7 @@
 #include <time.h>
 
 #include "sr_protocol.h"
+#include "sr_if.h"
 
 
 /* we dont like this debug , but what to do for varargs ? */
@@ -67,11 +68,7 @@ struct sr_instance
     /* -- pwospf subsystem -- */
     struct pwospf_subsys* ospf_subsys;
 
-    /* NEEDED FOR PWOSPF -mad */
-    uint32_t router_id;
     
-    /* NEEDED FOR PWOSPF -Adam */
-    struct interface_list_entry* interface_list;
 };
 
 /* -----------------------------------------------------------------------
@@ -111,6 +108,7 @@ struct sr_rt* get_routing_if(struct packet_state*, struct in_addr);
 void leave_hdr_room(struct packet_state *, int);
 int create_eth_hdr(uint8_t *, struct packet_state *, struct sr_ethernet_hdr *);
 uint16_t cksum(uint8_t *, int);
+void handle_ospf(struct packet_state *, struct ip *);
 
 
 /* -- sr_if.c -- */

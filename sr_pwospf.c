@@ -7,13 +7,19 @@
  *
  *---------------------------------------------------------------------------*/
 
-#include "sr_pwospf.h"
-#include "sr_router.h"
-
 #include <stdio.h>
 #include <unistd.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include "sr_pwospf.h"
+#include "sr_router.h"
+#include "pwospf_protocol.h"
+
+
+
+
 
 
 /* -- declaration of main thread function for pwospf subsystem --- */
@@ -40,6 +46,8 @@ int pwospf_init(struct sr_instance* sr)
 
 
     /* -- handle subsystem initialization here! -- */
+	
+	create_pwospf_ifaces(sr);
 
 
     /* -- start thread subsystem -- */
@@ -102,3 +110,50 @@ void* pwospf_run_thread(void* arg)
     };
 } /* -- run_ospf_thread -- */
 
+/*
+struct pwospf_iflist
+{
+	struct in_addr address;
+	struct in_addr mask;
+	char name[sr_IFACE_NAMELEN];
+	unsigned char addr[6];
+	uint16_t helloint;
+	struct neighbor_list *neighbors;
+	struct pwospf_iflist *next;
+};
+*/
+
+
+void create_pwospf_ifaces(struct sr_instance *sr)
+{
+	struct sr_if *cur_sr_if = sr->if_list;
+	struct pwospf_iflist *cur_pw_if = sr->ospf_subsys->interfaces;
+	if(cur_sr_if != NULL)
+	{
+		sr->ospf_subsys->interfaces = (struct pwospf_iflist *)malloc(sizeof(struct pwospf_iflist));
+		cur_pw_if = sr->ospf_subsys->interfaces;
+		cur_pw_if->address.s_addr = cur_sr_if->ip;
+		cur_pw_if->mask.s_addr = IF_MASK;
+		memmove(cur_pw_if->name, cur_sr_if->name, sr_IFACE_NAMELEN);
+		memmove(cur_pw_if->addr, cur_sr_if->addr, 6);
+		cur_pw_if->helloint = OSPF_DEFAULT_HELLOINT;
+		cur_pw_if->neighbors = NULL;
+		cur_pw_if->next = NULL;
+		cur_sr_if = cur_sr_if->next;
+	}
+	
+	while(cur_sr_if)
+	{
+		cur_pw_if->next = (struct pwospf_iflist *)malloc(sizeof(struct pwospf_iflist));
+		cur_pw_if = cur_pw_if->next;
+		cur_pw_if->address.s_addr = cur_sr_if->ip;
+		cur_pw_if->mask.s_addr = IF_MASK;
+		memmove(cur_pw_if->name, cur_sr_if->name, sr_IFACE_NAMELEN);
+		memmove(cur_pw_if->addr, cur_sr_if->addr, 6);
+		cur_pw_if->helloint = OSPF_DEFAULT_HELLOINT;
+		cur_pw_if->neighbors = NULL;
+		cur_pw_if->next = NULL;
+		cur_sr_if = cur_sr_if->next;
+	}
+
+}

@@ -6,6 +6,27 @@ Group 1
       Maddie Stone
       Adam Gross
 
+
+TODO:
+*-write remove methods for the neighborlist
+-Handle default gateways (i.e. to the internet)
+-all threading
+	-including possibly ARP
+-decide when we have an invalid link
+-drop LSU packets
+-forward LSU packets
+-buffering LSU packets
+-handle ospf packets (in sr_router.c)
+-create and read in configuration file (get area id, router id, etc)
+
+-update get_routing_if() in sr_router.c to first check dynamic forwarding table, then static one
+-probably some other stuff too
+
+DONE?
+-read in static routing table --> This is the routing table from the simple router
+-*need to make sure everything (e.g. pwospf_iface) is initialized in pwospf_init()
+
+
 Notes:
 
 This is so we each have a section of the README to pose questions to each other, add notes about

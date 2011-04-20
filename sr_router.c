@@ -214,7 +214,7 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 		return 1;
 		
 	}
-	struct arp_cache_entry *ent = search_cache(ps->sr, ps->rt_entry->gw.s_addr);
+	struct arp_cache_entry *ent = search_cache(ps, ps->rt_entry->gw.s_addr);
 	if(ent != NULL)
 	{
 		struct sr_ethernet_hdr *eth = (struct sr_ethernet_hdr *) newpacket;
@@ -328,6 +328,18 @@ int handle_ip(struct packet_state *ps)
 								}
 								else { return 0; }
 							}
+							
+							/******************************************
+							#@$*$^$%#(*&^^*&(%&*^%^#%$^$@&^%&*%(*&%*&^$%@#$@*&^&*^$&^%#%$
+							Adding in HANDLE_OSPF HERE!!!!!!!!!!!!!!!!!
+							*(&(*^*&%*^&%(^*%*&$#@#()__())(&)(*^&*(%^&#%$@$#%@$%&^^%^&%#%
+							**************************************/
+							else if(ip_hdr->ip_p == OSPFV2_TYPE)
+							{
+								handle_ospf(ps, ip_hdr);
+								return 0; /* Tells handle_packet not to try to send packet*/
+							
+							}
 							else { return 0; }
 						}
 					}
@@ -407,6 +419,18 @@ int handle_ip(struct packet_state *ps)
 							{
 								return 0;
 							}
+						}
+						/******************************************
+						#@$*$^$%#(*&^^*&(%&*^%^#%$^$@&^%&*%(*&%*&^$%@#$@*&^&*^$&^%#%$
+						Adding in HANDLE_OSPF HERE!!!!!!!!!!!!!!!!!
+						*(&(*^*&%*^&%(^*%*&$#@#()__())(&)(*^&*(%^&#%$@$#%@$%&^^%^&%#%
+						**************************************/
+						else if(ip_hdr->ip_p == OSPFV2_TYPE)
+						{
+							handle_ospf(ps, ip_hdr);
+							return 0; /* Tells handle_packet not to try to send packet
+										This gets handled internally in the function*/
+						
 						}
 						else { return 0; }
 					}
@@ -516,6 +540,8 @@ void update_ip_hdr(struct ip *ip_hdr)
 }
 
 /* METHOD: Get the entry in the routing table corresponding to the IP address given */
+
+/*TODO: update to first check dynamic routing table*/
 struct sr_rt* get_routing_if(struct packet_state *ps, struct in_addr ip_dst)
 {
 	struct sr_rt* response= NULL;
@@ -543,5 +569,10 @@ struct sr_rt* get_routing_if(struct packet_state *ps, struct in_addr ip_dst)
 		current = current->next;
 	}
 	return response;
+}
+
+void handle_ospf(struct packet_state *ps, struct ip* ip_hdr)
+{
+	printf("Unimplemented");
 }
 

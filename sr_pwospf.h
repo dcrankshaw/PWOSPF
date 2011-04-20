@@ -14,15 +14,20 @@
 #include <arpa/inet.h>
 #include <time.h>
 
+#include "sr_router.h"
+#include "sr_protocol.h"
+
 /* forward declare */
 struct sr_instance;
+
+#define IF_MASK 0xfffffffe
 
 
 struct route
 {
-	uint32_t prefix;
-	uint32_t mask;
-	uint32_t next_hop;
+	struct in_addr prefix;
+	struct in_addr mask;
+	/*struct in_addr next_hop;*/ /*probably don't need*/
 	uint32_t r_id;
 
 };
@@ -31,13 +36,13 @@ struct route
 struct router
 {
 	struct router **adjacencies;
-	
 	int adj_buf_size;	/* length of the dynamically allocated array, to prevent illegal mem access */
 	int adj_size;	/* number of entries in the list (list_size <= buf_size at all times) */
 	
 	struct route **subnets;
 	int subnet_buf_size;
 	int subnet_size;
+	
 	uint16_t last_seq;
 	time_t expired;
 	
@@ -74,6 +79,7 @@ struct pwospf_iflist
 	struct in_addr address;
 	struct in_addr mask;
 	char name[sr_IFACE_NAMELEN];
+	unsigned char addr[6];
 	uint16_t helloint;
 	struct neighbor_list *neighbors;
 	struct pwospf_iflist *next;
@@ -91,7 +97,7 @@ struct pwospf_subsys
     /* -- pwospf subsystem state variables here -- */
     struct adj_list *network;
     struct ftable_entry *fwrd_table;
-    struct pwospf_iflist* neighbors;
+    struct pwospf_iflist* interfaces;
     struct router *this_router;
     uint16_t last_seq_sent;
 
@@ -102,6 +108,7 @@ struct pwospf_subsys
 };
 
 int pwospf_init(struct sr_instance* sr);
+void create_pwospf_ifaces(struct sr_instance *sr);
 
 
 #endif /* SR_PWOSPF_H */
