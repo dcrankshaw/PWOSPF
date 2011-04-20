@@ -16,34 +16,10 @@
 #include "sr_protocol.h"
 #include "pwospf_protocol.h"
 
-/*
-
-#define ALLSPFRouters 0xe0000005
-
-struct interface_list_entry
-{
-    char* interface;
-    uint32_t ip_add;
-    uint32_t nmask;
-    uint16_t helloint;
-    unsigned char mac[ETHER_ADDR_LEN];
-    struct neighbor_list_entry* nghbrs;
-    struct interface_list_entry* next;
-};
-
-struct neighbor_list_entry
-{
-    uint32_t ip_add;
-    time_t timenotvalid;                /*The time when this entry is no longer valid*/
-    struct neighbor_list_entry* next;
-};
-
-*/
-
-void handle_HELLO(struct packet_state*, struct sr_ethernet_hdr*);
-struct neighbor_list_entry* delete_neighbor_list_entry(struct interface_list_entry*, struct neighbor_list_entry*);
-void print_all_neighbor_lists(struct sr_instance*);
-void print_neighbor_list_entry(struct neighbor_list_entry*);
+void handle_HELLO(struct packet_state*, struct sr_ethernet_hdr*, struct ip*);
+struct neighbor_list* delete_neighbor_list(struct pwospf_iflist*, struct neighbor_list*);
+void print_all_neighbor_lists(struct packet_state*);
+void print_neighbor_list(struct neighbor_list*);
 void send_HELLO(struct packet_state*);
 
 #endif

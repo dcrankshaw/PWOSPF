@@ -37,8 +37,8 @@ PURIFY= purify ${PFLAGS}
 sr_SRCS = sr_router.c sr_main.c  \
           sr_if.c sr_rt.c sr_vns_comm.c   \
           sr_dumper.c sha1.c sr_pwospf.c   \
-          icmp.c arp.c buffer.c fw.c top_info.c
-#add in lsu.c, hello.c
+          icmp.c arp.c buffer.c fw.c top_info.c hello.c
+#add in lsu.c
 
 sr_OBJS = $(patsubst %.c,%.o,$(sr_SRCS))
 sr_DEPS = $(patsubst %.c,.%.d,$(sr_SRCS))

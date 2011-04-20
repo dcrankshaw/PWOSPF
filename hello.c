@@ -30,7 +30,7 @@ Including their IP address, netmask, and MAC address
 /*******************************************************************
 *   Called when handle_packet() receives a HELLO packet.
 ********************************************************************/
-void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
+void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth_hdr, struct ip* ip_hdr)
 {
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;
@@ -44,7 +44,7 @@ void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 	else /* correctly sized packet */
 	{
 		pwospf_hdr = (struct ospfv2_hdr*)(ps->packet);
-		hello_hdr = (struct ospfv2_hello_hdr*)(ps->packet + sizeof(struct ospfv2_hdr));  /* HOW TO START THIS AT MEMORY LOCATION OF THE SECOND HALF OF THE HEADER???? */
+		hello_hdr = (struct ospfv2_hello_hdr*)(ps->packet + sizeof(struct ospfv2_hdr));
 
 		/* check incoming packet values against ONLY the receiving interface in the interface list */
 		if(iface == 0)
@@ -53,9 +53,9 @@ void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 		}
 		while(iface)
 		{
-			if(iface->name == ps->name) /* if the current interface equals the incoming interface */
+			if(iface->name == ps->interface) /* if the current interface equals the incoming interface */
 			{
-				if((iface->mask != hello_hdr->nmask) || (iface->helloint != hello_hdr->helloint))
+				if((iface->mask.s_addr != hello_hdr->nmask) || (iface->helloint != hello_hdr->helloint))
 				{
 					/* drop packet */
 					printf("HELLO doesn't match any interface - packet dropped");
@@ -70,7 +70,8 @@ void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 					iface->neighbors = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
 					assert(iface->neighbors);
 					iface->neighbors->next = 0;
-					iface->neighbors->address = pwospf_hdr->rid;  //WRONG
+					iface->neighbors->id = pwospf_hdr->rid;
+					iface->neighbors->ip_address = ip_hdr->ip_src;
 					iface->neighbors->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 				}
 				else /* add to end of iface->neighbors (end of neighbor_list_walker) */
@@ -78,7 +79,7 @@ void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 					neighbor_list_walker = iface->neighbors;
 					while(neighbor_list_walker != NULL)
 					{
-						if(neighbor_list_walker->ip_address == pwospf_hdr->rid)
+						if(neighbor_list_walker->ip_address.s_addr == ip_hdr->ip_src.s_addr) /* ?????????? SHOULD THIS BE COMPARING THE rid, NOT THE ip_address? */
 						{
 							neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 							return;
@@ -95,7 +96,8 @@ void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth)
 					assert(neighbor_list_walker->next);
 					neighbor_list_walker = neighbor_list_walker->next;
 					neighbor_list_walker->next = 0;
-					neighbor_list_walker->ip_address = pwospf_hdr->rid;
+					neighbor_list_walker->id = pwospf_hdr->rid;
+					neighbor_list_walker->ip_address = ip_hdr->ip_src;
 					neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 				}
 			}
@@ -161,20 +163,20 @@ struct neighbor_list* delete_neighbor_list(struct pwospf_iflist* iface, struct n
 /*******************************************************************
 *   Prints all of the Neighbor Lists for all Interfaces.
 *******************************************************************/
-void print_all_neighbor_lists(struct sr_instance* sr)
+void print_all_neighbor_lists(struct packet_state* ps)
 {
 	struct pwospf_iflist* interface_list_walker = 0;
 
 	printf("--- INTERFACE LIST ---\n");
-	if(sr->interfaces == 0)
+	if(ps->sr->ospf_subsys->interfaces == 0)
 	{
 		printf("INTERFACE LIST IS EMPTY\n");
 		return;
 	}
-	interface_list_walker = sr->interfaces;
+	interface_list_walker = ps->sr->ospf_subsys->interfaces;
 	while(interface_list_walker)
 	{
-		printf("Interface IP: %i", interface_list_walker->address); /* OLD: inet_ntoa(interface_list_walker->ip_add) */
+		printf("Interface IP: %i", interface_list_walker->address.s_addr); /* OLD: inet_ntoa(interface_list_walker->ip_add) */
 		printf("--- NEIGHBOR LIST ---\n");
 		struct neighbor_list* neighbor_list_walker = 0;
 		if(interface_list_walker->neighbors == 0)
@@ -199,7 +201,7 @@ void print_neighbor_list(struct neighbor_list* ent)
 {
 	struct in_addr ip_addr;
 	assert(ent);
-	ip_addr.s_addr = ent->address;
+	ip_addr = ent->ip_address;
 	printf("IP: %s\t", inet_ntoa(ip_addr));
 	printf("Time when Invalid: %lu\n",(long)ent->timenotvalid);
 }
@@ -241,7 +243,7 @@ void send_HELLO(struct packet_state* ps)
 	ip_hdr->ip_sum = cksum((uint8_t *)ip_hdr, sizeof(struct ip));
 	ip_hdr->ip_sum = htons(ip_hdr->ip_sum);
 	ip_hdr->ip_src.s_addr = 0x00000000; /* ~~~~~~ interface specific: set in while loop below ~~~~~~~~ */
-	ip_hdr->ip_dst.s_addr = OSPF_ALLSPFRouters; /* CHECK THIS ????????????? */
+	ip_hdr->ip_dst.s_addr = OSPF_AllSPFRouters; /* CHECK THIS ????????????? */
 
 	/* Set up PWOSPF header. */
 	pwospf_hdr->version = OSPF_V2;
@@ -261,13 +263,13 @@ void send_HELLO(struct packet_state* ps)
 	hello_hdr->padding = 0; /* ?????????? */
 
 	/* Send the packet out on each interface. */
-	struct pwospf_iflist* iface = ps->sr->interfaces;
+	struct pwospf_iflist* iface = ps->sr->ospf_subsys->interfaces;
 	assert(iface);
 	while(iface)
 	{
-		ip_hdr->ip_src.s_addr = iface->address; /* CHECK THIS ????????????? */
-		hello_hdr->nmask = iface->mask;
-		sr_send_packet(ps->sr, outgoing_packet_buffer, packet_size, iface->interface);
+		ip_hdr->ip_src = iface->address;
+		hello_hdr->nmask = iface->mask.s_addr;
+		sr_send_packet(ps->sr, outgoing_packet_buffer, packet_size, iface->name);
 		iface = iface->next;
 	}
 
