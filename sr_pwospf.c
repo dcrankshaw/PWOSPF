@@ -135,7 +135,7 @@ void create_pwospf_ifaces(struct sr_instance *sr)
 		cur_pw_if->address.s_addr = cur_sr_if->ip;
 		cur_pw_if->mask.s_addr = IF_MASK;
 		memmove(cur_pw_if->name, cur_sr_if->name, sr_IFACE_NAMELEN);
-		memmove(cur_pw_if->addr, cur_sr_if->addr, 6);
+		memmove(cur_pw_if->mac, cur_sr_if->addr, 6);
 		cur_pw_if->helloint = OSPF_DEFAULT_HELLOINT;
 		cur_pw_if->neighbors = NULL;
 		cur_pw_if->next = NULL;
@@ -149,7 +149,7 @@ void create_pwospf_ifaces(struct sr_instance *sr)
 		cur_pw_if->address.s_addr = cur_sr_if->ip;
 		cur_pw_if->mask.s_addr = IF_MASK;
 		memmove(cur_pw_if->name, cur_sr_if->name, sr_IFACE_NAMELEN);
-		memmove(cur_pw_if->addr, cur_sr_if->addr, 6);
+		memmove(cur_pw_if->mac, cur_sr_if->addr, 6);
 		cur_pw_if->helloint = OSPF_DEFAULT_HELLOINT;
 		cur_pw_if->neighbors = NULL;
 		cur_pw_if->next = NULL;
