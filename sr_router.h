@@ -88,6 +88,7 @@ struct packet_state
 	uint8_t *response;		/* the response packet (ethernet header included) */
 	unsigned int res_len;	/* the length of the response packet */
 	struct sr_rt *rt_entry;
+	struct ftable_entry *dyn_entry;
 	short forward;			/* 1 if forwarding, 0 if return to sender */
 };
 
@@ -104,11 +105,12 @@ void sr_init(struct sr_instance* );
 void sr_handlepacket(struct sr_instance* , uint8_t * , unsigned int , char* );
 int handle_ip(struct packet_state *);
 void update_ip_hdr(struct ip*);
-struct sr_rt* get_routing_if(struct packet_state*, struct in_addr);
+struct sr_rt* get_static_routing_if(struct packet_state*, struct in_addr);
 void leave_hdr_room(struct packet_state *, int);
 int create_eth_hdr(uint8_t *, struct packet_state *, struct sr_ethernet_hdr *);
 uint16_t cksum(uint8_t *, int);
 void handle_ospf(struct packet_state *, struct ip *);
+struct ftable_entry* get_dyn_routing_if(struct packet_state *, struct in_addr);
 
 
 /* -- sr_if.c -- */

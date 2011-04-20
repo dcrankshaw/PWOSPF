@@ -116,6 +116,7 @@ void sr_handlepacket(struct sr_instance* sr,
 	current.packet = packet;
 	current.len = len;
 	current.rt_entry = 0;
+	current.dyn_entry = 0;
 	current.interface = interface;
 	current.forward = 0;
 	uint8_t *head = (uint8_t *)malloc(MAX_PAC_LENGTH);
@@ -201,8 +202,19 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 	struct sr_if *sif = 0;
 	if(ps->forward)
 	{
-		assert(ps->rt_entry);
-		sif = sr_get_interface(ps->sr, ps->rt_entry->interface);
+		/*assert(ps->rt_entry);*/
+		if(ps->dyn_entry)
+		{
+			sif = sr_get_interface(ps->sr, ps->dyn_entry->interface);
+		}
+		else if(ps->rt_entry)
+		{
+			sif = sr_get_interface(ps->sr, ps->rt_entry->interface);
+		}
+		else
+		{
+			return 0;
+		}
 	}
 	else
 	{
@@ -214,7 +226,17 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 		return 1;
 		
 	}
-	struct arp_cache_entry *ent = search_cache(ps, ps->rt_entry->gw.s_addr);
+	
+	
+	struct arp_cache_entry *ent;
+	if(ps->dyn_entry)
+	{
+		ent = search_cache(ps, ps->dyn_entry->next_hop.s_addr);
+	}
+	else
+	{
+		ent = search_cache(ps, ps->rt_entry->gw.s_addr);
+	}
 	if(ent != NULL)
 	{
 		struct sr_ethernet_hdr *eth = (struct sr_ethernet_hdr *) newpacket;
@@ -284,7 +306,11 @@ int handle_ip(struct packet_state *ps)
 		}
 		int ip_offset = sizeof(struct ip);
 		
-		ps->rt_entry = get_routing_if(ps, ip_hdr->ip_dst);
+		ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
+		if(ps->dyn_entry == NULL)
+		{
+			ps->rt_entry = get_static_routing_if(ps, ip_hdr->ip_dst);
+		}
 		struct ip *iph = (struct ip*)ps->response; /* mark where the ip header should go */
 		
 
@@ -384,7 +410,16 @@ int handle_ip(struct packet_state *ps)
 			
 			if(is_external(ps->sr, ps->interface))
 			{
-				if(is_internal(ps->sr, ps->rt_entry->interface))
+				char *temp_if;
+				if(ps->dyn_entry)
+				{
+					temp_if = ps->dyn_entry->interface;
+				}
+				else
+				{
+					temp_if = ps->rt_entry->interface;
+				}
+				if(is_internal(ps->sr, temp_if))
 				{
 					leave_hdr_room(ps, ip_offset);
 					/*need at least 4 bytes for the dest and source ports */
@@ -539,10 +574,38 @@ void update_ip_hdr(struct ip *ip_hdr)
 	ip_hdr->ip_sum = htons(cksum((uint8_t *) ip_hdr, sizeof(struct ip)));
 }
 
-/* METHOD: Get the entry in the routing table corresponding to the IP address given */
+struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr ip_dst)
+{
+	struct ftable_entry* response= NULL;
 
-/*TODO: update to first check dynamic routing table*/
-struct sr_rt* get_routing_if(struct packet_state *ps, struct in_addr ip_dst)
+	struct ftable_entry *current = ps->sr->ospf_subsys->fwrd_table;
+	struct in_addr min_mask;
+	min_mask.s_addr = 0;
+	/*Iterate through routing table linked list*/
+	while(current != NULL)
+	{
+		/*If the bitwise AND of current mask and sought ip is equal to the current mask*/
+		
+		if((current->mask.s_addr & ip_dst.s_addr) == current->prefix.s_addr)
+		{
+			/*And if this is the closest fitting match so far
+				***To make sure that internally destinations that fit a mask better than 0.0.0.0
+				get to the right place****/
+			if(min_mask.s_addr <= current->mask.s_addr)
+			{
+				/*update the best fitting mask to the current one, and point found to current*/
+				min_mask=current->mask;
+				response=current;
+			}
+		}
+		current = current->next;
+	}
+	return response;
+}
+
+
+/* METHOD: Get the entry in the routing table corresponding to the IP address given */
+struct sr_rt* get_static_routing_if(struct packet_state *ps, struct in_addr ip_dst)
 {
 	struct sr_rt* response= NULL;
 
@@ -575,4 +638,3 @@ void handle_ospf(struct packet_state *ps, struct ip* ip_hdr)
 {
 	printf("Unimplemented");
 }
-

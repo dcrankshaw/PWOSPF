@@ -11,6 +11,7 @@
 #include "sr_router.h"
 #include "sr_protocol.h"
 #include "arp.h"
+#include "sr_pwospf.h"
 
 
 #ifndef ARP_IP_LEN
@@ -317,8 +318,19 @@ void send_request(struct packet_state* ps, const uint32_t dest_ip)
 	/* Find source interface */
 	struct in_addr ip_d;
 	ip_d.s_addr=dest_ip;
-	struct sr_rt* iface_rt_entry=get_routing_if(ps, ip_d);          /*Find rt entry to send request from. */
-	struct sr_if* iface=sr_get_interface(ps->sr, iface_rt_entry->interface); /*Find iface associated with rt entry */
+	char *temp_if = NULL;
+	struct ftable_entry *iface_dyn_entry = get_dyn_routing_if(ps, ip_d);
+	struct sr_rt* iface_rt_entry = NULL;
+	if(iface_dyn_entry != NULL)
+	{
+		temp_if = iface_dyn_entry->interface;
+	}
+	else
+	{
+		iface_rt_entry=get_static_routing_if(ps, ip_d);          /*Find rt entry to send request from. */
+		temp_if = iface_rt_entry->interface;
+	}
+	struct sr_if* iface=sr_get_interface(ps->sr, temp_if); /*Find iface associated with rt entry */
 	assert(iface); 
 	memmove(request->ar_sha, iface->addr, ETHER_ADDR_LEN); /*Set ARP source address to interface's hardware address */
 	request->ar_sip=iface->ip;  /*Set ARP source IP address to interface's IP address */
@@ -331,7 +343,15 @@ void send_request(struct packet_state* ps, const uint32_t dest_ip)
 	}
 	
 	/*Set ARP target IP address to interface's gateway IP address */
-	request->ar_tip=iface_rt_entry->gw.s_addr; 
+	if(iface_dyn_entry)
+	{
+		request->ar_tip=iface_dyn_entry->next_hop.s_addr; 
+	}
+	else
+	{
+		request->ar_tip=iface_rt_entry->gw.s_addr; 
+	}
+	
 	
 	
 	/*ARP Constructed, Now Construct Ethernet Header */
@@ -339,7 +359,7 @@ void send_request(struct packet_state* ps, const uint32_t dest_ip)
 	new_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 	memmove(new_eth->ether_shost, iface->addr,ETHER_ADDR_LEN); /*Ethernet Source Address is Interface's Address */
 	
-	
+	ps->dyn_entry = iface_dyn_entry;
 	ps->rt_entry = iface_rt_entry; /*******************/
 	
 	/*Set Ethernet dest MAC address to ff:ff:ff:ff:ff:ff (Broadcast) */

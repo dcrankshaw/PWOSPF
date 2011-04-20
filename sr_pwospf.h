@@ -70,7 +70,6 @@ struct ftable_entry
 	struct in_addr next_hop;
 	char interface[sr_IFACE_NAMELEN];	/*the interface to send the packet out of*/
 	int num_hops;
-	
 	struct ftable_entry *next;
 };
 
