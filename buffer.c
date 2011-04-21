@@ -15,6 +15,7 @@
 #include "arp.h"
 #include "buffer.h"
 #include "icmp.h"
+#include "sr_pwospf.h"
 
 
 /*******************************************************************
@@ -75,9 +76,19 @@ void update_buffer(struct packet_state* ps,struct packet_buffer* queue)
 			res_ip->ip_p = IPPROTO_ICMP;
 			
 			/* Finding interface to send ICMP out of*/
-			struct sr_rt* iface_rt_entry=get_routing_if(ps, ip_hdr->ip_src);
-			struct sr_if* iface=sr_get_interface(ps->sr, iface_rt_entry->interface);
-			
+			struct ftable_entry* iface_dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_src);
+			struct sr_rt* iface_rt_entry = NULL;
+			char *temp_if = NULL;
+			if(iface_dyn_entry)
+			{
+				temp_if = iface_dyn_entry->interface;
+			}
+			else
+			{
+				iface_rt_entry = get_static_routing_if(ps, ip_hdr->ip_src);
+				temp_if = iface_rt_entry->interface;
+			}
+			struct sr_if* iface=sr_get_interface(ps->sr, temp_if);
 			res_ip->ip_src.s_addr = iface->ip;
 			res_ip->ip_dst = ip_hdr->ip_src;
 			res_ip->ip_sum = 0;
@@ -91,7 +102,7 @@ void update_buffer(struct packet_state* ps,struct packet_buffer* queue)
 			memmove(eth_resp->ether_shost,iface->addr, ETHER_ADDR_LEN);
 			eth_resp->ether_type=htons(ETHERTYPE_IP);
 			
-			sr_send_packet(ps->sr, ps->response, ps->res_len, iface_rt_entry->interface);
+			sr_send_packet(ps->sr, ps->response, ps->res_len, temp_if);
 
 			buf_walker=delete_from_buffer(ps,buf_walker);	
 		}
@@ -175,8 +186,20 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
 		memmove(ps->sr->queue->packet, pac, ps->res_len);
 		ps->sr->queue->pack_len=ps->res_len;
 		
-		struct sr_rt* rt_entry=get_routing_if(ps, dest_ip);
-		ps->sr->queue->gw_IP=rt_entry->gw.s_addr;
+		
+		struct ftable_entry *dyn_entry = get_dyn_routing_if(ps, dest_ip);
+		struct sr_rt* rt_entry=NULL;
+		uint32_t tempgw = 0;
+		if(dyn_entry)
+		{
+			tempgw = dyn_entry->prefix.s_addr;
+		}
+		else
+		{
+			rt_entry=get_static_routing_if(ps, dest_ip);
+			tempgw = rt_entry->gw.s_addr;
+		}
+		ps->sr->queue->gw_IP=tempgw;
 		ps->sr->queue->interface=(char *)malloc(sr_IFACE_NAMELEN);
 		
 		memmove(ps->sr->queue->interface, rt_entry->interface, sr_IFACE_NAMELEN);
@@ -204,7 +227,14 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
 		buf_walker->interface=(char *)malloc(sr_IFACE_NAMELEN);
 		memmove(buf_walker->interface, iface->name, sr_IFACE_NAMELEN); 
 		buf_walker->ip_dst=dest_ip;
-		ps->sr->queue->gw_IP=ps->rt_entry->gw.s_addr;
+		if(ps->dyn_entry)
+		{
+			ps->sr->queue->gw_IP=ps->dyn_entry->next_hop.s_addr;
+		}
+		else
+		{
+			ps->sr->queue->gw_IP=ps->rt_entry->gw.s_addr;
+		}
 		buf_walker->num_arp_reqs=0;
 		buf_walker->old_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 		memmove(buf_walker->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
