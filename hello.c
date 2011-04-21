@@ -209,7 +209,7 @@ void print_neighbor_list(struct neighbor_list* ent)
 /*******************************************************************
 *   Creates and sends a HELLO packet with Ethernet, IP, OSPF, and OSPF_HELLO headers.
 *******************************************************************/
-void send_HELLO(struct packet_state* ps)
+void send_HELLO(struct sr_instance* sr)
 {
 	unsigned int packet_size = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr);
 	uint8_t* outgoing_packet_buffer = malloc(packet_size);
@@ -263,13 +263,13 @@ void send_HELLO(struct packet_state* ps)
 	hello_hdr->padding = 0; /* ?????????? */
 
 	/* Send the packet out on each interface. */
-	struct pwospf_iflist* iface = ps->sr->ospf_subsys->interfaces;
+	struct pwospf_iflist* iface = sr->ospf_subsys->interfaces;
 	assert(iface);
 	while(iface)
 	{
 		ip_hdr->ip_src = iface->address;
 		hello_hdr->nmask = iface->mask.s_addr;
-		sr_send_packet(ps->sr, outgoing_packet_buffer, packet_size, iface->name);
+		sr_send_packet(sr, outgoing_packet_buffer, packet_size, iface->name);
 		iface = iface->next;
 	}
 
