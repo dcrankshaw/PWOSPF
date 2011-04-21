@@ -38,8 +38,9 @@ int pwospf_init(struct sr_instance* sr)
 {
     assert(sr);
 
-    sr->ospf_subsys = (struct pwospf_subsys*)malloc(sizeof(struct
-                                                      pwospf_subsys));
+    sr->ospf_subsys = (struct pwospf_subsys*)malloc(sizeof(struct pwospf_subsys));
+    
+    sr->ospf_subsys->this_router->subnet_size=0;
 
     assert(sr->ospf_subsys);
     pthread_mutex_init(&(sr->ospf_subsys->lock), 0);
@@ -128,18 +129,18 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
         //FAIL
     }
     
-    if(pwospf_hdr->aid!=sr->pwospf_subsys->area_id)
+    if(pwospf_hdr->aid!=ps->sr->ospf_subsys->area_id)
     {
         //FAIL
     }
     
-    if(pwospf_hdr->autype!=sr->pwospf_subsys->autype)
+    if(pwospf_hdr->autype!=ps->sr->ospf_subsys->autype)
     {
         //FAIL
     }
     
     /* Now need to switch to the different hello and pwospf */
-    
+    return 1;
 }
 
 /*

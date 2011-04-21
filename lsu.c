@@ -1,9 +1,24 @@
 /* LSU implementation */
 
+#include <stdlib.h>
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "sr_if.h"
+#include "sr_rt.h"
+#include "sr_router.h"
+#include "sr_protocol.h"
+#include "sr_pwospf.h"
+#include "pwospf_protocol.h"
+#include "top_info.h"
+#include "lsu.h"
+#include "arp.h"
+
 void handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps)
 {
     
-    if(pwospf->rid==ps->sr->routerID)
+    if(pwospf->rid==ps->sr->ospf_subsys->this_router->rid)
     {
         //DROP
     }
@@ -12,30 +27,30 @@ void handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps)
     ps->packet=ps->packet + sizeof(struct ospfv2_hdr); 
     struct ospfv2_lsu_hdr* lsu_head = (struct ospfv2_lsu_hdr*)(ps->packet);
     
-    uint16_t old_seq= get_sequence(pwospf_rid, ps->sr);
+    uint16_t old_seq= get_sequence(pwospf->rid, ps->sr);
     if(old_seq==lsu_head->seq)
     {
         //DROP
     }
-    uint32t_t source_rid=pwospf->rid;
+    uint32_t source_rid=pwospf->rid;
     struct route* advertisements=(struct route*)malloc(lsu_head->num_adv); //Can't rem if this is how to do this
     
    
     for(int i=0; i<lsu_head->num_adv; i++)
     {
-         ps->packet=ps->packet+sizeof(struct ospfv2_lsu-hdr);
+         ps->packet=(ps->packet)+sizeof(struct ospfv2_lsu_hdr);
         struct ospfv2_lsu_adv* temp_adv=(struct ospfv2_lsu_adv*)(ps->packet);
         
         struct route temp_rt;
-        temp_rt.prefix=temp_adv->subnet;
-        temp_rt.mask=temp_adv->mask;
+        temp_rt.prefix.s_addr=temp_adv->subnet;
+        temp_rt.mask.s_addr=temp_adv->mask;
         temp_rt.r_id=temp_adv->rid;
         
-        advertisement[i]=temp_rt;
+        advertisements[i]=temp_rt;
     }
     
     /* Adds advertisements to topology if necessary and recomputes FT if necessary.*/
-    add_to_top(ps->sr, source_rid, &advertisements[0], lsu_head->num_adv);
+    add_to_top(ps->sr, source_rid, &advertisements, lsu_head->num_adv);
   
     set_sequence(pwospf->rid, lsu_head->seq, ps->sr);
     
@@ -62,7 +77,7 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
     struct router* my_router=sr->ospf_subsys->this_router;
     uint8_t* pack=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+
             sizeof(struct ip)+sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr)
-            + (my_router->subnet_size)(sizeof(struct ospfv2_lsu_hdr)));
+            + ((my_router->subnet_size)*(sizeof(struct ospfv2_lsu_hdr))));
     pack=pack+sizeof(struct sr_ethernet_hdr)+sizeof(struct ip)+
             sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr);
     
@@ -72,7 +87,7 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
     int j;
     for(j=0; j<my_router->subnet_size; j++)
     {
-        memmove(pack, adv_walker[i], sizeof(struct ospfv2_lsu_adv));
+        memmove(pack, &adv_walker[j], sizeof(struct ospfv2_lsu_adv));
         pack+=sizeof(struct ospfv2_lsu_adv);
     } 
     
@@ -95,7 +110,7 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
     pwospf_hdr->version=OSPF_V2;
     pwospf_hdr->type=OSPF_TYPE_LSU;
     /*For length do I include ip and ethernet hdrs too???? */
-    pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size)*(sizeof(ospfv2_lsu_adv));
+    pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv));
     pwospf_hdr->rid=my_router->rid;
     pwospf_hdr->aid= /*Where are we keeping the aid??*/
     pwospf_hdr->autype=0;
@@ -121,12 +136,12 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
     struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
     while(iface_walker)
     {
-        ip_src=neigh_walker->address;
+        ip_hdr->ip_src=iface_walker->address;
         struct neighbor_list* neigh_walker=iface_walker->neighbors;
         while (neigh_walker)
         {
             /*Finish constructing IP Header */
-            ip_dst=neigh_walker->ip_address;
+            ip_hdr->ip_dst=neigh_walker->ip_address;
             ip_hdr->ip_sum=0;
             ip_hdr->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
             ip_hdr->ip_sum=htons(ip_hdr->ip_sum);
@@ -143,12 +158,12 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
             memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
             
             /*Find MAC Address of source*/
-            struct arp_cache_entry* arp_ent=search_cache(sr, ip_hdr->ip_dst.s_addr);
+            struct arp_cache_entry* arp_ent=search_cache(ps, ip_hdr->ip_dst.s_addr);
             if(arp_ent!=NULL)
             {
                 memmove(eth_hdr->ether_dhost, arp_ent->mac, ETHER_ADDR_LEN);
                 memmove(pack, eth_hdr, sizeof(struct sr_ethernet_hdr));
-                sr_send_packet(sr, pack, sizeof(pack), src_if);
+                sr_send_packet(sr, pack, sizeof(pack), iface_walker->name);
                 /*Packet has been sent*/
             }
             else
@@ -168,18 +183,32 @@ struct ospfv2_lsu_adv* generate_adv(struct sr_instance* sr)
         return NULL;
     
     /*Do i want an array of pointers or an array of headers?*/
-    struct ospfv2_lsu_adv advertisements[my_router->subnet_size]=(struct ospfv2_lsu_adv*)malloc(my_router->subnet_size);
+    //struct ospfv2_lsu_adv* advertisements[my_router->subnet_size]=(struct ospfv2_lsu_adv*)malloc(sizeof(struct ospfv2_lsu_adv);
+    struct ospfv2_lsu_adv advertisements[my_router->subnet_size];
+    
+    
     
     int i;
     for(i=0; i<my_router->subnet_size; i++)
     {
         struct route* temp_rt=my_router->subnets[i];
         struct ospfv2_lsu_adv new_adv;
-        new_adv.subnet=temp_rt->prefix;
-        new_adv.mask=temp_rt->mask;
+        new_adv.subnet=temp_rt->prefix.s_addr;
+        new_adv.mask=temp_rt->mask.s_addr;
         new_adv.rid=temp_rt->r_id;
         advertisements[i]=new_adv;
     }
+    /*
+    struct ospfv2_lsu_adv* advertisements=(struct ospfv2_lsu_adv*)malloc(sizeof(struct ospfv2_lsu_adv));
+    for(i=0; i<my_router->subnet_size; i++)
+    {
+        struct route* temp_rt=my_router->subnets[i];
+        struct ospfv2_lsu_adv new_adv;
+        new_adv.subnet=temp_rt->prefix.s_addr;
+        new_adv.mask=temp_rt->mask.s_addr;
+        new_adv.rid=temp_rt->r_id;
+        advertisements=next;
+    }*/
     
     return advertisements;   
 } 
