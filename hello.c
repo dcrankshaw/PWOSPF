@@ -30,7 +30,7 @@ Including their IP address, netmask, and MAC address
 /*******************************************************************
 *   Called when handle_packet() receives a HELLO packet.
 ********************************************************************/
-void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth_hdr, struct ip* ip_hdr)
+void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 {
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;

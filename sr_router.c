@@ -355,14 +355,9 @@ int handle_ip(struct packet_state *ps)
 								else { return 0; }
 							}
 
-							/******************************************
-							#@$*$^$%#(*&^^*&(%&*^%^#%$^$@&^%&*%(*&%*&^$%@#$@*&^&*^$&^%#%$
-							Adding in HANDLE_OSPF HERE!!!!!!!!!!!!!!!!!
-							*(&(*^*&%*^&%(^*%*&$#@#()__())(&)(*^&*(%^&#%$@$#%@$%&^^%^&%#%
-							**************************************/
 							else if(ip_hdr->ip_p == OSPFV2_TYPE)
 							{
-								handle_ospf(ps, ip_hdr);
+								handle_pwospf(ps, ip_hdr);
 								return 0; /* Tells handle_packet not to try to send packet*/
 
 							}
@@ -455,14 +450,9 @@ int handle_ip(struct packet_state *ps)
 								return 0;
 							}
 						}
-						/******************************************
-						#@$*$^$%#(*&^^*&(%&*^%^#%$^$@&^%&*%(*&%*&^$%@#$@*&^&*^$&^%#%$
-						Adding in HANDLE_OSPF HERE!!!!!!!!!!!!!!!!!
-						*(&(*^*&%*^&%(^*%*&$#@#()__())(&)(*^&*(%^&#%$@$#%@$%&^^%^&%#%
-						**************************************/
 						else if(ip_hdr->ip_p == OSPFV2_TYPE)
 						{
-							handle_ospf(ps, ip_hdr);
+							handle_pwospf(ps, ip_hdr);
 							return 0; /* Tells handle_packet not to try to send packet
 										This gets handled internally in the function*/
 
@@ -635,7 +625,4 @@ struct sr_rt* get_static_routing_if(struct packet_state *ps, struct in_addr ip_d
 	return response;
 }
 
-void handle_ospf(struct packet_state *ps, struct ip* ip_hdr)
-{
-	printf("Unimplemented");
-}
+

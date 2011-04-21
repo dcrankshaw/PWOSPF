@@ -16,6 +16,8 @@
 #include "sr_pwospf.h"
 #include "sr_router.h"
 #include "pwospf_protocol.h"
+#include "lsu.h"
+#include "hello.h"
 
 
 
@@ -118,7 +120,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*)(ps->packet);
     if(pwospf_hdr->version!=2)
     {
-        //FAIL
+        return 0;
     }
     /*Verify Checksum*/
     uint16_t csum_cal=0;
@@ -126,20 +128,34 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     csum_cal=cksum((uint8_t*) pwospf_hdr, sizeof(struct ospfv2_hdr));
     if(csum_cal!=pwospf_hdr->csum)
     {
-        //FAIL
+        return 0;
     }
     
     if(pwospf_hdr->aid!=ps->sr->ospf_subsys->area_id)
     {
-        //FAIL
+        return 0;
     }
     
     if(pwospf_hdr->autype!=ps->sr->ospf_subsys->autype)
     {
-        //FAIL
+        return 0;
     }
     
     /* Now need to switch to the different hello and pwospf */
+    if(pwospf_hdr->type==OSPF_TYPE_HELLO)
+    {
+        handle_HELLO(ps, ip_hdr);
+    }
+    else if(pwospf_hdr->type==OSPF_TYPE_LSU)
+    {
+        handle_lsu(pwospf_hdr, ps);
+    }
+    else
+    {
+        printf("Invalid PWOSPF Type.\n");
+        return 0;
+    }
+    
     return 1;
 }
 

@@ -108,8 +108,8 @@ struct pwospf_subsys
     pthread_mutex_t lock;
 };
 
-int pwospf_init(struct sr_instance* sr);
-void create_pwospf_ifaces(struct sr_instance *sr);
-
+int pwospf_init(struct sr_instance* );
+void create_pwospf_ifaces(struct sr_instance *);
+int handle_pwospf(struct packet_state* , struct ip* );
 
 #endif /* SR_PWOSPF_H */
