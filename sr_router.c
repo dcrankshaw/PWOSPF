@@ -305,22 +305,22 @@ int handle_ip(struct packet_state *ps)
 			return 0;
 		}
 		int ip_offset = sizeof(struct ip);
-		
+
 		ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
 		if(ps->dyn_entry == NULL)
 		{
 			ps->rt_entry = get_static_routing_if(ps, ip_hdr->ip_dst);
 		}
 		struct ip *iph = (struct ip*)ps->response; /* mark where the ip header should go */
-		
+
 
 		int found_case = 0;	/*used to determine which loops to go into*/
-		
+
 		/*Deals with router as destination*/
 		if(!found_case)
 		{
 			struct sr_if *iface = ps->sr->if_list;
-			
+
 			while(iface != NULL)
 			{
 				if(iface->ip == ip_hdr->ip_dst.s_addr)
@@ -345,7 +345,7 @@ int handle_ip(struct packet_state *ps)
 								{
 									src_port = *((uint16_t*)ps->packet);
 									dst_port = *((uint16_t*)(ps->packet + 2));
-									
+
 									if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
 									ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, src_port, dst_port) == 0)
 									{
@@ -354,22 +354,17 @@ int handle_ip(struct packet_state *ps)
 								}
 								else { return 0; }
 							}
-							
-							/******************************************
-							#@$*$^$%#(*&^^*&(%&*^%^#%$^$@&^%&*%(*&%*&^$%@#$@*&^&*^$&^%#%$
-							Adding in HANDLE_OSPF HERE!!!!!!!!!!!!!!!!!
-							*(&(*^*&%*^&%(^*%*&$#@#()__())(&)(*^&*(%^&#%$@$#%@$%&^^%^&%#%
-							**************************************/
+
 							else if(ip_hdr->ip_p == OSPFV2_TYPE)
 							{
-								handle_ospf(ps, ip_hdr);
+								handle_pwospf(ps, ip_hdr);
 								return 0; /* Tells handle_packet not to try to send packet*/
-							
+
 							}
 							else { return 0; }
 						}
 					}
-					
+
 					found_case = 1;
 					leave_hdr_room(ps, ip_offset);
 					if(ip_hdr->ip_p == IPPROTO_ICMP)
@@ -380,12 +375,12 @@ int handle_ip(struct packet_state *ps)
 					{
 						icmp_response(ps, ip_hdr, ICMPT_DESTUN, ICMPC_PORTUN);
 					}
-					
+
 					memmove(iph, ip_hdr, sizeof(struct ip));
-					
+
 					/*subtract outer ethernet header wrapping the IP datagram */
 					iph->ip_len = htons(ps->res_len - sizeof(struct sr_ethernet_hdr));
-					
+
 					iph->ip_ttl = INIT_TTL;
 					iph->ip_tos = ip_hdr->ip_tos;
 					iph->ip_p = IPPROTO_ICMP;
@@ -407,7 +402,7 @@ int handle_ip(struct packet_state *ps)
 		if(!found_case)
 		{
 			/*check if interface==eth0*/
-			
+
 			if(is_external(ps->sr, ps->interface))
 			{
 				char *temp_if;
@@ -436,41 +431,36 @@ int handle_ip(struct packet_state *ps)
 					{
 						if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 						{
-							
-							
+
+
 							/*memmove(&src_port, ps->packet, 2);
 							memmove(&dst_port, (ps->packet + 2), 2);*/
-							
+
 							src_port = 0;
 							dst_port = 0;
 							src_port = *((uint16_t*)ps->packet);
 							dst_port = *((uint16_t*)(ps->packet + 2));
 							//src_port = ntohs(src_port);
 							//dst_port = ntohs(dst_port);
-							
-							
+
+
 							if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
 							ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, src_port, dst_port) == 0)
 							{
 								return 0;
 							}
 						}
-						/******************************************
-						#@$*$^$%#(*&^^*&(%&*^%^#%$^$@&^%&*%(*&%*&^$%@#$@*&^&*^$&^%#%$
-						Adding in HANDLE_OSPF HERE!!!!!!!!!!!!!!!!!
-						*(&(*^*&%*^&%(^*%*&$#@#()__())(&)(*^&*(%^&#%$@$#%@$%&^^%^&%#%
-						**************************************/
 						else if(ip_hdr->ip_p == OSPFV2_TYPE)
 						{
-							handle_ospf(ps, ip_hdr);
+							handle_pwospf(ps, ip_hdr);
 							return 0; /* Tells handle_packet not to try to send packet
 										This gets handled internally in the function*/
-						
+
 						}
 						else { return 0; }
 					}
 					else { return 0; }
-					
+
 				}
 			}
 			else
@@ -487,26 +477,26 @@ int handle_ip(struct packet_state *ps)
 					{
 						if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 						{
-							
+
 							src_port = 0;
 							dst_port = 0;
 							src_port = *((uint16_t*)ps->packet);
 							dst_port = *((uint16_t*)(ps->packet + 2));
-							
+
 							if(!tell_valid(ps->sr, ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr, 
 											ip_hdr->ip_p, dst_port, src_port))
 							{
 								return 0;
 							}
-							
-							
-							
+
+
+
 						}
 						else { return 0; }
 					}
 					else { return 0; }
 			}
-			
+
 			if(ip_hdr->ip_ttl < 1)
 			{
 				/*packet expired*/
@@ -527,6 +517,7 @@ int handle_ip(struct packet_state *ps)
 	}
 	return 1;
 }
+
 
 /*Updates all values in the received packet and the response packet (that we are creating)
  * so that we are dealing with the packet at the right layer (e.g. IP, ICMP, etc)
@@ -650,7 +641,4 @@ struct sr_rt* get_static_routing_if(struct packet_state *ps, struct in_addr ip_d
 	return response;
 }
 
-void handle_ospf(struct packet_state *ps, struct ip* ip_hdr)
-{
-	printf("Unimplemented");
-}
+

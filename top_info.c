@@ -663,3 +663,30 @@ struct router* get_smallest_unknown(struct adj_list *current)
 	return least_unknown;
 }
 
+uint16_t get_sequence(uint32_t router_id, struct sr_instance *sr)
+{
+    struct adj_list* net_walker=sr->ospf_subsys->network;
+    while(net_walker)
+    {
+        if(net_walker->rt->rid==router_id)
+        {
+            return net_walker->rt->last_seq;
+        }
+        else
+            net_walker=net_walker->next;
+    }
+    return 0;
+}
+void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
+{
+    struct adj_list* net_walker=sr->ospf_subsys->network;
+    while(net_walker)
+    {
+        if(net_walker->rt->rid==router_id)
+        {
+            net_walker->rt->last_seq=sequence;
+        }
+        else
+            net_walker=net_walker->next;
+    }
+}

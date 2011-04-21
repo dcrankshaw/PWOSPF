@@ -30,7 +30,7 @@ Including their IP address, netmask, and MAC address
 /*******************************************************************
 *   Called when handle_packet() receives a HELLO packet.
 ********************************************************************/
-void handle_HELLO(struct packet_state* ps, struct sr_ethernet_hdr* eth_hdr, struct ip* ip_hdr)
+void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 {
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;
@@ -209,7 +209,7 @@ void print_neighbor_list(struct neighbor_list* ent)
 /*******************************************************************
 *   Creates and sends a HELLO packet with Ethernet, IP, OSPF, and OSPF_HELLO headers.
 *******************************************************************/
-void send_HELLO(struct packet_state* ps)
+void send_HELLO(struct sr_instance* sr)
 {
 	unsigned int packet_size = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr);
 	uint8_t* outgoing_packet_buffer = malloc(packet_size);
@@ -251,11 +251,12 @@ void send_HELLO(struct packet_state* ps)
 	pwospf_hdr->len = sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr);
 	pwospf_hdr->rid = 0; /* ????????????? */
 	pwospf_hdr->aid = 0; /* ????????????? */
-	pwospf_hdr->csum = 0; /* ????????????? */
-	pwospf_hdr->csum = cksum((uint8_t *)pwospf_hdr, sizeof(struct ospfv2_hdr)-64); /* Minus 64 to exclude the authentication field. */
-	pwospf_hdr->csum = htons(pwospf_hdr->csum);
 	pwospf_hdr->autype = OSPF_DEFAULT_AUTHKEY;
 	pwospf_hdr->audata = OSPF_DEFAULT_AUTHKEY;
+	pwospf_hdr->csum = 0; /* ????????????? */
+	pwospf_hdr->csum = cksum((uint8_t *)pwospf_hdr, sizeof(struct ospfv2_hdr)); /* Minus 64 to exclude the authentication field. */
+	pwospf_hdr->csum = htons(pwospf_hdr->csum);
+	
 
 	/* Set up HELLO header. */
 	hello_hdr->nmask = 0; /* ~~~~~~ inteface specific: set in while loop below ~~~~~~~ */
@@ -263,13 +264,13 @@ void send_HELLO(struct packet_state* ps)
 	hello_hdr->padding = 0; /* ?????????? */
 
 	/* Send the packet out on each interface. */
-	struct pwospf_iflist* iface = ps->sr->ospf_subsys->interfaces;
+	struct pwospf_iflist* iface = sr->ospf_subsys->interfaces;
 	assert(iface);
 	while(iface)
 	{
 		ip_hdr->ip_src = iface->address;
 		hello_hdr->nmask = iface->mask.s_addr;
-		sr_send_packet(ps->sr, outgoing_packet_buffer, packet_size, iface->name);
+		sr_send_packet(sr, outgoing_packet_buffer, packet_size, iface->name);
 		iface = iface->next;
 	}
 

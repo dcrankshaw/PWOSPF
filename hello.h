@@ -17,11 +17,10 @@
 #include "pwospf_protocol.h"
 
 
-/*THESE NEED TO ALL TAKE struct sr_instance not packet_state*/
-void handle_HELLO(struct packet_state*, struct sr_ethernet_hdr*, struct ip*);
+void handle_HELLO(struct packet_state*, struct ip*);
 struct neighbor_list* delete_neighbor_list(struct pwospf_iflist*, struct neighbor_list*);
 void print_all_neighbor_lists(struct packet_state*);
 void print_neighbor_list(struct neighbor_list*);
-void send_HELLO(struct packet_state*);
+void send_HELLO(struct sr_instance*);
 
 #endif

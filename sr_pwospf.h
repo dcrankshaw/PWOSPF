@@ -101,15 +101,16 @@ struct pwospf_subsys
     struct router *this_router;
     uint16_t last_seq_sent;
     uint32_t area_id;
-
+    uint16_t autype;
 
     /* -- thread and single lock for pwospf subsystem -- */
     pthread_t thread;
     pthread_mutex_t lock;
 };
 
-int pwospf_init(struct sr_instance* sr);
-void create_pwospf_ifaces(struct sr_instance *sr);
-
+int pwospf_init(struct sr_instance* );
+void create_pwospf_ifaces(struct sr_instance *);
+int handle_pwospf(struct packet_state* , struct ip* );
+uint32_t read_config(const char*);
 
 #endif /* SR_PWOSPF_H */
