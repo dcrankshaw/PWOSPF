@@ -19,10 +19,7 @@
 #include "lsu.h"
 #include "hello.h"
 
-
-
-
-
+#define FILENAME "ospf_config"
 
 /* -- declaration of main thread function for pwospf subsystem --- */
 static void* pwospf_run_thread(void* arg);
@@ -47,17 +44,18 @@ int pwospf_init(struct sr_instance* sr)
     assert(sr->ospf_subsys);
     pthread_mutex_init(&(sr->ospf_subsys->lock), 0);
 
-
     /* -- handle subsystem initialization here! -- */
 	
 	create_pwospf_ifaces(sr);
-
 
     /* -- start thread subsystem -- */
     if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) {
         perror("pthread_create");
         assert(0);
     }
+
+    /* -- read in ospf_config -- */
+	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
 
     return 0; /* success */
 } /* -- pwospf_init -- */
@@ -207,3 +205,24 @@ void create_pwospf_ifaces(struct sr_instance *sr)
 
 }
 
+uint32_t read_config(const char* filename)
+{
+	FILE* fp = 0;
+	char line[BUFSIZ];
+	uint32_t aid;
+
+	assert(filename);
+	if(access(filename,R_OK) != 0)
+	{
+		perror("access");
+		return 0;
+	}
+	
+	fp = fopen(filename,"r");
+	
+	while(fgets(line,BUFSIZ,fp) != 0)
+	{
+		sscanf(line, "%u", &aid);
+	}
+	return 1;
+}
