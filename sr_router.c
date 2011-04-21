@@ -274,93 +274,100 @@ int handle_ip(struct packet_state *ps)
 	else
 	{
 		struct ip *ip_hdr = (struct ip *)ps->packet;
-		uint16_t src_port = 0;
-		uint16_t dst_port = 0;
-		/* indicates IP header has options, which we don't care about */
-		if((ip_hdr->ip_hl)*4 > sizeof(struct ip)) /* x 4 because there are 4 bytes per 32 bit word */
+		if(ip_hdr->ip_p==OSPFV2_TYPE)
 		{
-			printf("struct length: %zu\npacketlength: %u\n", sizeof(struct ip), ntohs(ip_hdr->ip_len));
-			return 0;
+		    handle_pwospf(ps);
 		}
-		int ip_offset = sizeof(struct ip);
-		
-		ps->rt_entry = get_routing_if(ps, ip_hdr->ip_dst);
-		struct ip *iph = (struct ip*)ps->response; /* mark where the ip header should go */
-		
-
-		int found_case = 0;	/*used to determine which loops to go into*/
-		
-		/*Deals with router as destination*/
-		if(!found_case)
-		{
-			struct sr_if *iface = ps->sr->if_list;
-			
-			while(iface != NULL)
-			{
-				if(iface->ip == ip_hdr->ip_dst.s_addr)
-				{
-					/*verify valid packet with firewall*/
-					if(is_external(ps->sr, ps->interface))
-					{	
-						if(is_internal(ps->sr, iface->name))
-						{ 
-							if(ip_hdr->ip_p == IPPROTO_ICMP)
-							{
-								if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
-								ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, 0, 0) == 0)
-								/*send 0 if it's an ICMP packet because they don't 
-								have port numbers */
-								{ return 0; }
-							}
-							else if(ip_hdr->ip_p == IPPROTO_TCP 
-								||ip_hdr->ip_p == IPPROTO_UDP)
-							{
-								if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
-								{
-									src_port = *((uint16_t*)ps->packet);
-									dst_port = *((uint16_t*)(ps->packet + 2));
-									
-									if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
-									ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, src_port, dst_port) == 0)
-									{
-										return 0;
-									}
-								}
-								else { return 0; }
-							}
-							else { return 0; }
-						}
-					}
-					
-					found_case = 1;
-					leave_hdr_room(ps, ip_offset);
-					if(ip_hdr->ip_p == IPPROTO_ICMP)
-					{
-						handle_icmp(ps, ip_hdr);
-					}
-					else
-					{
-						icmp_response(ps, ip_hdr, ICMPT_DESTUN, ICMPC_PORTUN);
-					}
-					
-					memmove(iph, ip_hdr, sizeof(struct ip));
-					
-					/*subtract outer ethernet header wrapping the IP datagram */
-					iph->ip_len = htons(ps->res_len - sizeof(struct sr_ethernet_hdr));
-					
-					iph->ip_ttl = INIT_TTL;
-					iph->ip_tos = ip_hdr->ip_tos;
-					iph->ip_p = IPPROTO_ICMP;
-					iph->ip_src = ip_hdr->ip_dst;
-					iph->ip_dst = ip_hdr->ip_src;
-					iph->ip_sum = 0;
-					iph->ip_sum = cksum((uint8_t *)iph, sizeof(struct ip));
-					iph->ip_sum = htons(iph->ip_sum);
-					return 1;
-				}
-				else
-				{
-					iface = iface->next;
+		else
+        {
+            uint16_t src_port = 0;
+            uint16_t dst_port = 0;
+            /* indicates IP header has options, which we don't care about */
+            if((ip_hdr->ip_hl)*4 > sizeof(struct ip)) /* x 4 because there are 4 bytes per 32 bit word */
+            {
+                printf("struct length: %zu\npacketlength: %u\n", sizeof(struct ip), ntohs(ip_hdr->ip_len));
+                return 0;
+            }
+            int ip_offset = sizeof(struct ip);
+            
+            ps->rt_entry = get_routing_if(ps, ip_hdr->ip_dst);
+            struct ip *iph = (struct ip*)ps->response; /* mark where the ip header should go */
+            
+    
+            int found_case = 0;	/*used to determine which loops to go into*/
+            
+            /*Deals with router as destination*/
+            if(!found_case)
+            {
+                struct sr_if *iface = ps->sr->if_list;
+                
+                while(iface != NULL)
+                {
+                    if(iface->ip == ip_hdr->ip_dst.s_addr)
+                    {
+                        /*verify valid packet with firewall*/
+                        if(is_external(ps->sr, ps->interface))
+                        {	
+                            if(is_internal(ps->sr, iface->name))
+                            { 
+                                if(ip_hdr->ip_p == IPPROTO_ICMP)
+                                {
+                                    if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
+                                    ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, 0, 0) == 0)
+                                    /*send 0 if it's an ICMP packet because they don't 
+                                    have port numbers */
+                                    { return 0; }
+                                }
+                                else if(ip_hdr->ip_p == IPPROTO_TCP 
+                                    ||ip_hdr->ip_p == IPPROTO_UDP)
+                                {
+                                    if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
+                                    {
+                                        src_port = *((uint16_t*)ps->packet);
+                                        dst_port = *((uint16_t*)(ps->packet + 2));
+                                        
+                                        if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
+                                        ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, src_port, dst_port) == 0)
+                                        {
+                                            return 0;
+                                        }
+                                    }
+                                    else { return 0; }
+                                }
+                                else { return 0; }
+                            }
+                        }
+                        
+                        found_case = 1;
+                        leave_hdr_room(ps, ip_offset);
+                        if(ip_hdr->ip_p == IPPROTO_ICMP)
+                        {
+                            handle_icmp(ps, ip_hdr);
+                        }
+                        else
+                        {
+                            icmp_response(ps, ip_hdr, ICMPT_DESTUN, ICMPC_PORTUN);
+                        }
+                        
+                        memmove(iph, ip_hdr, sizeof(struct ip));
+                        
+                        /*subtract outer ethernet header wrapping the IP datagram */
+                        iph->ip_len = htons(ps->res_len - sizeof(struct sr_ethernet_hdr));
+                        
+                        iph->ip_ttl = INIT_TTL;
+                        iph->ip_tos = ip_hdr->ip_tos;
+                        iph->ip_p = IPPROTO_ICMP;
+                        iph->ip_src = ip_hdr->ip_dst;
+                        iph->ip_dst = ip_hdr->ip_src;
+                        iph->ip_sum = 0;
+                        iph->ip_sum = cksum((uint8_t *)iph, sizeof(struct ip));
+                        iph->ip_sum = htons(iph->ip_sum);
+                        return 1;
+                    }
+                    else
+                    {
+                        iface = iface->next;
+                    }
 				}
 			}
 		}
@@ -390,16 +397,10 @@ int handle_ip(struct packet_state *ps)
 						if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 						{
 							
-							
-							/*memmove(&src_port, ps->packet, 2);
-							memmove(&dst_port, (ps->packet + 2), 2);*/
-							
 							src_port = 0;
 							dst_port = 0;
 							src_port = *((uint16_t*)ps->packet);
 							dst_port = *((uint16_t*)(ps->packet + 2));
-							//src_port = ntohs(src_port);
-							//dst_port = ntohs(dst_port);
 							
 							
 							if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
@@ -439,7 +440,6 @@ int handle_ip(struct packet_state *ps)
 							{
 								return 0;
 							}
-							
 							
 							
 						}

@@ -102,3 +102,33 @@ void* pwospf_run_thread(void* arg)
     };
 } /* -- run_ospf_thread -- */
 
+int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
+{
+    ps->packet+=sizeof(struct ip);
+    struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*)(ps->packet);
+    if(pwospf_hdr->version!=2)
+    {
+        //FAIL
+    }
+    /*Verify Checksum*/
+    uint16_t csum_cal=0;
+    pwospf_hdr->audata=0;
+    csum_cal=cksum((uint8_t*) pwospf_hdr, sizeof(struct ospfv2_hdr));
+    if(csum_cal!=pwospf_hdr->csum)
+    {
+        //FAIL
+    }
+    
+    if(pwospf_hdr->aid!=sr->pwospf_subsys->area_id)
+    {
+        //FAIL
+    }
+    
+    if(pwospf_hdr->autype!=sr->pwospf_subsys->autype)
+    {
+        //FAIL
+    }
+    
+    /* Now need to switch to the different hello and pwospf */
+    
+}

@@ -59,7 +59,7 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
     Do we want to do the sending here or somewhere else??
     */
     
-    struct router* my_router=sr->pwospf_subsys->this_router;
+    struct router* my_router=sr->ospf_subsys->this_router;
     uint8_t* pack=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+
             sizeof(struct ip)+sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr)
             + (my_router->subnet_size)(sizeof(struct ospfv2_lsu_hdr)));
@@ -83,7 +83,7 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
     
     /*Generate LSU Header */
     struct ospfv2_lsu_hdr* lsu_hdr=(struct ospfv2_lsu_hdr*)malloc(sizeof(struct ospfv2_lsu_hdr));
-    lsu_hdr->seq=sr->pwospf_subsys->last_seq_sent;
+    lsu_hdr->seq=sr->ospf_subsys->last_seq_sent;
     lsu_hdr->ttl=INIT_TTL;
     lsu_hdr->num_adv=my_router->subnet_size;
     
@@ -118,7 +118,7 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
     ip_hdr->ip_ttl= INIT_TTL;
     ip_hdr->ip_p=OSPFV2_TYPE;
   
-    struct pwospf_iflist* iface_walker=sr->pwospf_subsys->neighbors;
+    struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
     while(iface_walker)
     {
         ip_src=neigh_walker->address;
@@ -163,7 +163,7 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
 
 struct ospfv2_lsu_adv* generate_adv(struct sr_instance* sr)
 {
-    struct router * my_router = sr->pwospf_subsys->this_router;
+    struct router * my_router = sr->ospf_subsys->this_router;
     if(my_router==NULL);
         return NULL;
     
