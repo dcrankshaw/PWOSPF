@@ -251,11 +251,12 @@ void send_HELLO(struct sr_instance* sr)
 	pwospf_hdr->len = sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr);
 	pwospf_hdr->rid = 0; /* ????????????? */
 	pwospf_hdr->aid = 0; /* ????????????? */
-	pwospf_hdr->csum = 0; /* ????????????? */
-	pwospf_hdr->csum = cksum((uint8_t *)pwospf_hdr, sizeof(struct ospfv2_hdr)-64); /* Minus 64 to exclude the authentication field. */
-	pwospf_hdr->csum = htons(pwospf_hdr->csum);
 	pwospf_hdr->autype = OSPF_DEFAULT_AUTHKEY;
 	pwospf_hdr->audata = OSPF_DEFAULT_AUTHKEY;
+	pwospf_hdr->csum = 0; /* ????????????? */
+	pwospf_hdr->csum = cksum((uint8_t *)pwospf_hdr, sizeof(struct ospfv2_hdr)); /* Minus 64 to exclude the authentication field. */
+	pwospf_hdr->csum = htons(pwospf_hdr->csum);
+	
 
 	/* Set up HELLO header. */
 	hello_hdr->nmask = 0; /* ~~~~~~ inteface specific: set in while loop below ~~~~~~~ */

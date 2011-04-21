@@ -148,7 +148,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     }
     else if(pwospf_hdr->type==OSPF_TYPE_LSU)
     {
-        handle_lsu(pwospf_hdr, ps);
+        handle_lsu(pwospf_hdr, ps, ip_hdr);
     }
     else
     {
