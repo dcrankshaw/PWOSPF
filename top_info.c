@@ -95,7 +95,7 @@ void check_top_invalid(struct sr_instance *sr)
 	struct adj_list *prev = NULL;
 	while(current)
 	{
-		if(current->rt->expired <= now)
+		if(current->rt->expired <= now && current->rt->rid != sr->this_router->rid)
 		{
 			remove_from_topo(sr, current->rt);
 			if(prev == NULL)
@@ -117,8 +117,11 @@ void check_top_invalid(struct sr_instance *sr)
 				current = NULL;
 			}
 		}
+		else
+		{
+			current = current->next;
+		}
 	}
-
 }
 
 /*removes from the given router's subnet list and adjacency list*/
@@ -266,14 +269,18 @@ struct router* adj_list_contains(struct sr_instance *sr, uint32_t id)
 	return NULL;
 }
 
+
 void add_to_existing_router(struct sr_instance *sr, struct route **routes, struct router* host, int num_ads)
 {
 	/*TODO: this is pretty inefficient, it may be alright though if these stay small enough */
+		host->expired = time(NULL) + 3*OSPF_DEFAULT_LSUINT;
 		int i;
 		for(i = 0; i < num_ads; i++)
 		{
+			/*If this does not already exist in the router's subnets*/
 			if(router_contains(routes[i], host) == 0)
 			{
+				
 				add_new_route(sr, routes[i], host);
 			}
 		}
@@ -292,19 +299,26 @@ int router_contains(struct route* rt, struct router *host)
 	return 0;
 }
 
+/*May not need this method???*/
+struct route* router_contains_subnet(uint32_t prefix, struct router* host)
+{
+	int i;
+	for(i = 0; i < host->subnet_size; i++)
+	{
+		if(host->subnets[i]->prefix == subnet->prefix)
+		{
+			return host->subnets[i];
+		}
+	}
+	return 0;
+
+}
+
 void add_new_route(struct sr_instance *sr, struct route* current, struct router* host)
 {
-	/*Need to resize subnet buffer*/
-	if(host->subnet_buf_size == host->subnet_size)
-	{
-		host->subnets = realloc(host->subnets, 2*host->subnet_buf_size); //double size of array
-		host->subnet_buf_size *= 2;
-	}
-	/*add to list of subnets*/
-	memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
-	host->subnet_size++;
 	
 	/*add to adj_list*/
+	int invalid = 0;
 	if(current->r_id != 0)
 	{
 		if(host->adj_buf_size == host->adj_size)
@@ -320,10 +334,23 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 		{
 			if(cur_router->rt->rid == current->r_id)
 			{
-				host->adjacencies[host->adj_size] = cur_router->rt;
-				host->adj_size++;
-				added = 1;
+				struct route* other_sub = router_contains_subnet(cur_router->rt, current->prefix);
+				/*This is an invalid connection*/
+				if((other_sub != NULL) && ((other_sub->mask.s_addr != current->mask.s_addr) ||
+						(other_sub->r_id != host->rid)))
+				{
+					remove_rt_sn_using_id(sr, cur_router->rt, other_sub->r_id);
+					invalid = 1;
+				}
+				else
+				{
+					host->adjacencies[host->adj_size] = cur_router->rt;
+					host->adj_size++;
+					added = 1;
+				}
 				break;
+				
+				
 			}
 			else
 			{
@@ -332,11 +359,27 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 		}
 		if(!added)
 		{
-			/* ?????????????????????????????????????????????????
-			TODO: BUFFERING MAYBE?
-			???????????????????????????????????????????????????*/
-		
+			struct router *new_adj = add_new_router(sr, current->rid);
+			host->adjacencies[host->adj_size] = new_adj;
+			host->adj_size++;
+			struct route* opp_route = (struct route*) malloc(sizeof(struct route));
+			memmove(opp_route, current, sizeof(struct route));
+			opp_route->r_id = host->rid;
+			add_new_route(sr, opp_route, new_adj);
 		}
+	}
+	
+	/*Need to resize subnet buffer*/
+	if(!invalid)
+	{
+		if(host->subnet_buf_size == host->subnet_size)
+		{
+			host->subnets = realloc(host->subnets, 2*host->subnet_buf_size); //double size of array
+			host->subnet_buf_size *= 2;
+		}
+		/*add to list of subnets*/
+		memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
+		host->subnet_size++;
 	}
 }
 

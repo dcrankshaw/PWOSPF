@@ -16,6 +16,9 @@
 #include "sr_pwospf.h"
 #include "sr_router.h"
 #include "pwospf_protocol.h"
+#include "lsu.h"
+#include "hello.h
+#include "top_info.h"
 
 
 
@@ -102,26 +105,35 @@ void* pwospf_run_thread(void* arg)
     {
         /* -- PWOSPF subsystem functionality should start  here! -- */
 
+        int i;
+        for(i = 0; i < OSPF_DEFAULT_LSUINT; i += OSPF_DEFAULT_HELLOINT)
+        {
+        	printf("This is where we send Hello packets");
+        	pwospf_lock(sr->ospf_subsys);
+        	send_HELLO(sr);
+        	pwospf_unlock(sr->ospf_subsys);
+        	sleep(OSPF_DEFAULT_HELLOINT);
+        }
+        /*Send LSU updates*/
+        
+        
+        
+        
+        printf("This is where we send LSU updates");
         pwospf_lock(sr->ospf_subsys);
+        check_top_invalid(sr); /*Check for expired topo entries*/
+    	send_lsu(sr);
+        pwospf_unlock(sr->ospf_subsys);
+        
+        
+        
+       /* pwospf_lock(sr->ospf_subsys);
         printf(" pwospf subsystem sleeping \n");
         pwospf_unlock(sr->ospf_subsys);
         sleep(2);
-        printf(" pwospf subsystem awake \n");
+        printf(" pwospf subsystem awake \n");*/
     };
 } /* -- run_ospf_thread -- */
-
-/*
-struct pwospf_iflist
-{
-	struct in_addr address;
-	struct in_addr mask;
-	char name[sr_IFACE_NAMELEN];
-	unsigned char addr[6];
-	uint16_t helloint;
-	struct neighbor_list *neighbors;
-	struct pwospf_iflist *next;
-};
-*/
 
 
 void create_pwospf_ifaces(struct sr_instance *sr)

@@ -6,17 +6,13 @@ Group 1
       Maddie Stone
       Adam Gross
 
-
 TODO:
 *-write remove methods for the neighborlist
 -all threading
 	-including possibly ARP
--decide when we have an invalid link
--drop LSU packets
--forward LSU packets
 -buffering LSU packets
--handle ospf packets (in sr_router.c) - method stub is there, it just needs to be written
--create and read in configuration file (get area id, router id, etc)
+
+
 -probably some other stuff too
 
 DONE?
@@ -24,6 +20,19 @@ DONE?
 -*need to make sure everything (e.g. pwospf_iface) is initialized in pwospf_init()
 -Handle default gateways (i.e. to the internet) - will be handled in the static routes
 -update get_routing_if() in sr_router.c to first check dynamic forwarding table, then static one
+-add router when we get an advert about one we don't know about (decide what exactly to put in the
+ properties of the router, and will this affect Dijkstra's at all)
+ 		-add check to make sure that router's with same subnet don't advertise different neighbors
+ 		 (*see better comment in the code)
+ -I think I still need to update the LSUTIMEOUT's of each route struct when I add to them
+	-also need to check whether they are expired or not probably
+-write set and get sequence methods
+-handle ospf packets (in sr_router.c) - method stub is there, it just needs to be written
+-decide when we have an invalid link
+-drop LSU packets
+-create and read in config file (with router id, area id, etc.)
+	-make sure that all struct pwospf_subsys variable are initialized in pwospf_init()
+
 
 
 Notes:
@@ -32,11 +41,50 @@ This is so we each have a section of the README to pose questions to each other,
 our particular pieces of code, etc. Only delete things from your section.
 
 Dan:
+-Locking and unlocking mutexes (esp in top_info.c, lsu.c, hello.c)
+		-includes double-checking that we don't need to lock it anywhere else (like in sr_router,
+		 arp, buffer)
+-conditional wait for LSU packets (so that we send packets every LSUINT seconds AND whenever we
+ get a change to the link state update
 
-Question about arp.c line 343 - "ps->rt_entry = iface_rt_entry; /*******************/"
+
 
 
 Maddie:
 
 
 Adam:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void add_to_existing_router(struct sr_instance *sr, struct route **routes, struct router* host, int num_ads)
+{
+	/*TODO: this is pretty inefficient, it may be alright though if these stay small enough */
+		int i;
+		for(i = 0; i < num_ads; i++)
+		{
+			if(router_contains_subnet(routes[i], host) == 1)
+			{
+				if(router_contains(routes[i], host) == 0)
+				{
+					/*dont add connection, remove the existing connection in host*/
+				}
+			}
+			else
+			{
+				add_new_route(sr, routes[i], host);
+			}
+			
+		}
+}

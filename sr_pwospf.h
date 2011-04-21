@@ -100,6 +100,7 @@ struct pwospf_subsys
     struct pwospf_iflist* interfaces;
     struct router *this_router;
     uint16_t last_seq_sent;
+    uint32_t area_id;
 
 
     /* -- thread and single lock for pwospf subsystem -- */

@@ -105,6 +105,10 @@ void update_buffer(struct packet_state* ps,struct packet_buffer* queue)
 			sr_send_packet(ps->sr, ps->response, ps->res_len, temp_if);
 
 			buf_walker=delete_from_buffer(ps,buf_walker);	
+			if(iface_dyn_entry)
+				free(iface_dyn_entry);
+			if(iface_rt_entry)
+				free(iface_rt_entry);
 		}
 	}
 }
@@ -172,6 +176,8 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
                                     const struct sr_if* iface, struct sr_ethernet_hdr *orig_eth)
 {
 	struct packet_buffer* buf_walker=0;
+	struct ftable_entry *dyn_entry = get_dyn_routing_if(ps, dest_ip);
+	struct sr_rt* rt_entry=NULL;
 	
 	assert(ps);
 	assert(pac);
@@ -187,8 +193,6 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
 		ps->sr->queue->pack_len=ps->res_len;
 		
 		
-		struct ftable_entry *dyn_entry = get_dyn_routing_if(ps, dest_ip);
-		struct sr_rt* rt_entry=NULL;
 		uint32_t tempgw = 0;
 		if(dyn_entry)
 		{
@@ -202,12 +206,11 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
 		ps->sr->queue->gw_IP=tempgw;
 		ps->sr->queue->interface=(char *)malloc(sr_IFACE_NAMELEN);
 		
-		memmove(ps->sr->queue->interface, rt_entry->interface, sr_IFACE_NAMELEN);
+		memmove(ps->sr->queue->interface, iface, sr_IFACE_NAMELEN);
 		ps->sr->queue->ip_dst=dest_ip;
 		ps->sr->queue->num_arp_reqs=0;
 		ps->sr->queue->old_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 		memmove(ps->sr->queue->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
-		return ps->sr->queue;
 	}
 	else /* Buffer is not Empty so Add to End. */
 	{
@@ -240,6 +243,12 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
 		memmove(buf_walker->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
 		return buf_walker;
 	}
+	if(iface_dyn_entry)
+		free(iface_dyn_entry);
+	if(iface_rt_entry)
+		free(iface_rt_entry);
+	return ps->sr->queue;
+	
 	ps->res_len = 0; /* Reset packet state's response length to 0 */
 	return NULL;
 }

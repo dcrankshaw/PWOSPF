@@ -381,6 +381,10 @@ void send_request(struct packet_state* ps, const uint32_t dest_ip)
 		free(request);
 	if(new_eth)	
 		free(new_eth);
+	if(iface_dyn_entry)
+		free(iface_dyn_entry);
+	if(iface_rt_entry)
+		free(iface_rt_entry);
 		
 	ps->res_len=eth_offset + sizeof(struct sr_arphdr);
 }

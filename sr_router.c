@@ -576,12 +576,16 @@ void update_ip_hdr(struct ip *ip_hdr)
 
 struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr ip_dst)
 {
+	
 	struct ftable_entry* response= NULL;
-
+	
+	/*LOCK MUTEX*/
+	pwospf_lock(ps->sr->ospf_subsys);
+	
 	struct ftable_entry *current = ps->sr->ospf_subsys->fwrd_table;
 	struct in_addr min_mask;
 	min_mask.s_addr = 0;
-	/*Iterate through routing table linked list*/
+	/*Iterate through forwarding table linked list*/
 	while(current != NULL)
 	{
 		/*If the bitwise AND of current mask and sought ip is equal to the current mask*/
@@ -600,7 +604,19 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 		}
 		current = current->next;
 	}
-	return response;
+	
+	if(response == NULL)
+	{
+		pwospf_unlock(ps->sr->ospf_subsys);
+		return NULL;
+	}
+	else
+	{
+		struct ftable_entry *retval = (struct ftable_entry *)malloc(sizeof(struct ftable_entry));
+		memmove(retval, response, sizeof(struct ftable_entry));
+		pwospf_unlock(ps->sr->ospf_subsys);
+		return retval;
+	}
 }
 
 
