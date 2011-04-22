@@ -113,5 +113,7 @@ int pwospf_init(struct sr_instance* );
 void create_pwospf_ifaces(struct sr_instance *);
 int handle_pwospf(struct packet_state* , struct ip* );
 uint32_t read_config(const char*);
+void pwospf_lock(struct pwospf_subsys*);
+void pwospf_unlock(struct pwospf_subsys* subsys);
 
 #endif /* SR_PWOSPF_H */

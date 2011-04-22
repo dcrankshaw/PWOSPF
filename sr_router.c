@@ -35,6 +35,7 @@
 #include "buffer.h"
 #include "sr_pwospf.h"
 #include "pwospf_protocol.h"
+#include "arpq.h"
 
 #define DEF_RULE_TABLE "rules"
 #define IFACE_CONFIG	"if_config"
@@ -156,7 +157,7 @@ void sr_handlepacket(struct sr_instance* sr,
 			break;
 			case (ETHERTYPE_ARP):
 			{
-				struct arp_cache_entry *new_entry = handle_ARP(&current, eth);
+				uint8_t *new_entry = handle_ARP(&current, eth);
 				if(new_entry == NULL)
 				{
 					if(current.res_len >0)
@@ -227,7 +228,7 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 	}
 	
 	
-	char *mac = NULL;
+	unsigned char *mac = NULL;
 	struct in_addr nhop;
 	if(ps->dyn_entry)
 	{
@@ -239,7 +240,7 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 		nhop = ps->rt_entry->gw;
 	}
 	
-	mac = search_cache(sr, ps->dyn_entry->nhop.s_addr);
+	mac = search_cache(ps->sr, nhop.s_addr);
 	
 	if(mac != NULL)
 	{
@@ -260,7 +261,7 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 				assert(current->arp_req);
 				memmove(current->arp_req, ps->response, ps->res_len);
 				current->arp_len = ps->res_len;*/
-		get_mac_address(ps->sr, nhop, newpacket, ps->res_len, sif->name, 0, eth->rec);
+		get_mac_address(ps->sr, nhop, newpacket, ps->res_len, sif->name, 0, eth_rec);
 		return 0;
 	}
 	return 0;

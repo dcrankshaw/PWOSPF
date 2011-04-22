@@ -107,10 +107,10 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                 memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
                 
                 /*Find MAC Address of source*/
-                struct arp_cache_entry* arp_ent=search_cache(ps, ip_hdr->ip_dst.s_addr);
-                if(arp_ent!=NULL)
+                uint8_t *mac=search_cache(ps->sr, ip_hdr->ip_dst.s_addr);
+                if(mac!=NULL)
                 {
-                    memmove(eth_hdr->ether_dhost, arp_ent->mac, ETHER_ADDR_LEN);
+                    memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
                     memmove(packet, eth_hdr, sizeof(struct sr_ethernet_hdr));
                     uint16_t packet_size=ip_hdr->ip_len + sizeof(struct sr_ethernet_hdr);
                     sr_send_packet(sr, packet, packet_size, iface_walker->name);
@@ -215,10 +215,10 @@ void send_lsu(struct sr_instance* sr)
             memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
             
             /*Find MAC Address of source*/
-            struct arp_cache_entry* arp_ent=search_cache(sr, ip_hdr->ip_dst.s_addr);
-            if(arp_ent!=NULL)
+           uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);
+            if(mac!=NULL)
             {
-                memmove(eth_hdr->ether_dhost, arp_ent->mac, ETHER_ADDR_LEN);
+                memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
                 memmove(pack, eth_hdr, sizeof(struct sr_ethernet_hdr));
                 sr_send_packet(sr, pack, sizeof(pack), iface_walker->name);
                 /*Packet has been sent*/

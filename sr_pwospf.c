@@ -60,14 +60,20 @@ int pwospf_init(struct sr_instance* sr)
 		cur_sn = sr->ospf_subsys->this_router->subnets[i];
 		cur_sn->mask = cur_if->mask;
 		cur_sn->prefix.s_addr = (cur_if->address.s_addr & cur_sn->mask.s_addr);
-		if(cur_if->address.s_addr % 2 == 0)
+		struct in_addr temp;
+		temp.s_addr = 1;
+		
+		/* won't compile because of invalid binary operand nonsense*/
+		/*if(cur_if->address.s_addr % 2 == 0)
 		{
-			cur_sn->next_hop.s_addr = cur_if->address + 1;
+			cur_sn->next_hop.s_addr = cur_if->address + temp.s_addr;
+			
 		}
 		else
 		{
-			cur_sn->next_hop.s_addr = cur_if->address - 1;
-		}
+			cur_sn->next_hop.s_addr = cur_if->address - temp.s_addr;
+		}*/
+		cur_sn->next_hop.s_addr = temp.s_addr; /*THIS IS WRONG!!!!!!!!!!!!!!!!*/
 		cur_sn->r_id = 0;
 	}
 	
@@ -75,8 +81,7 @@ int pwospf_init(struct sr_instance* sr)
 	/* Probably need to initialize the forwarding table the same way */
 	
 	
-	char* i = "eth0";
-	struct sr_if* zero = sr_get_interface(sr, i);
+	struct sr_if* zero = sr_get_interface(sr, "eth0");
 	sr->ospf_subsys->this_router = add_new_router(sr, zero->ip);
 	sr->ospf_subsys->last_seq_sent = 0;
 	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */

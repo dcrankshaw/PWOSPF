@@ -19,11 +19,11 @@ struct lsu_buf_ent
     uint8_t* lsu_packet;
     uint16_t pack_len;
     struct lsu_buf_ent* next;
-}
+};
  
- struct lsu_buf_ent* add_to_lsu_buff(struct lsu_buf_ent*, uint8_t* , 
-            uint16_t);
- void delete_all_lsu(struct lsu_buf_ent*);
+struct lsu_buf_ent* add_to_lsu_buff(struct lsu_buf_ent*, uint8_t*, uint16_t);
+void delete_all_lsu(struct lsu_buf_ent*);
+void send_all_lsus(struct lsu_buf_ent*, uint8_t*, char*, struct sr_instance*);
  
  
  #endif

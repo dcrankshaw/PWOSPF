@@ -27,7 +27,7 @@ struct arpq
 	struct packet_buffer* pac_buf; /*the linked list buffering tcp/udp/icmp packets*/
 	struct lsu_buf_ent* lsu_buf; /*the linked list buffering lsu packets*/
 	char iface_name[sr_IFACE_NAMELEN];
-	
+	struct arpq* next;
 };
 
 struct thread_args
@@ -41,8 +41,9 @@ struct thread_args
 void arp_subsys_init(struct sr_instance* sr);
 void get_mac_address(struct sr_instance *, struct in_addr, uint8_t *,
 					uint16_t , char *, int, struct sr_ethernet_hdr*);
-int arp_req_init(void*);
-struct arpq* create_entry(struct arp_subsys*, struct in_addr, char*);
+void* arp_req_init(void*);
+struct arpq* get_entry(struct sr_instance *, struct in_addr);
+struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys*, struct in_addr, char*);
 void lock_cache(struct arp_subsys*);
 void unlock_cache(struct arp_subsys*);
 void lock_arp_q(struct arp_subsys*);

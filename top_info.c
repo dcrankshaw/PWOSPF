@@ -14,6 +14,7 @@
 #include "sr_pwospf.h"
 #include "sr_router.h"
 #include "top_info.h"
+#include "pwospf_protocol.h"
 
 
 int remove_neighbor(void)
@@ -101,7 +102,7 @@ void check_top_invalid(struct sr_instance *sr)
 	struct adj_list *prev = NULL;
 	while(current)
 	{
-		if(current->rt->expired <= now && current->rt->rid != sr->this_router->rid)
+		if(current->rt->expired <= now && current->rt->rid != sr->ospf_subsys->this_router->rid)
 		{
 			remove_from_topo(sr, current->rt);
 			if(prev == NULL)
@@ -311,7 +312,7 @@ struct route* router_contains_subnet(struct router* host, uint32_t prefix)
 	int i;
 	for(i = 0; i < host->subnet_size; i++)
 	{
-		if(host->subnets[i]->prefix == subnet->prefix)
+		if(host->subnets[i]->prefix.s_addr == prefix)
 		{
 			return host->subnets[i];
 		}
@@ -322,6 +323,12 @@ struct route* router_contains_subnet(struct router* host, uint32_t prefix)
 
 void add_new_route(struct sr_instance *sr, struct route* current, struct router* host)
 {
+	
+	if(host->subnet_buf_size == host->subnet_size)
+	{
+		host->subnets = realloc(host->subnets, 2*host->subnet_buf_size); //double size of array
+		host->subnet_buf_size *= 2;
+	}
 	
 	/*add to adj_list*/
 	int invalid = 0;
@@ -340,7 +347,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 		{
 			if(cur_router->rt->rid == current->r_id)
 			{
-				struct route* other_sub = router_contains_subnet(cur_router->rt, current->prefix);
+				struct route* other_sub = router_contains_subnet(cur_router->rt, current->prefix.s_addr);
 				/*This is an invalid connection*/
 				if((other_sub != NULL) && ((other_sub->mask.s_addr != current->mask.s_addr) ||
 						(other_sub->r_id != host->rid)))
@@ -354,8 +361,25 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 					host->adj_size++;
 					added = 1;
 				}
-				break;
 				
+				if(!invalid)
+				{
+					
+					/*add to list of subnets*/
+					struct route* old_sub = router_contains_subnet(cur_router->rt, current->prefix.s_addr);
+					/*This is a check for that weird FAQ issue about initialzing subnets*/
+					/*Basically, if we initialized the connection at startup, then later received an LSU*/
+					if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask.s_addr == current->mask.s_addr)
+					{
+						old_sub->r_id = current->r_id;
+					}
+					else
+					{
+						memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
+						host->subnet_size++;
+					}	
+				}
+				break;
 				
 			}
 			else
@@ -366,7 +390,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 		if(!added)
 		{
 			/*create new route*/
-			struct router *new_adj = add_new_router(sr, current->rid);
+			struct router *new_adj = add_new_router(sr, current->r_id);
 			host->adjacencies[host->adj_size] = new_adj;
 			host->adj_size++;
 			struct route* opp_route = (struct route*) malloc(sizeof(struct route));
@@ -377,26 +401,10 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 	}
 	
 	/*Need to resize subnet buffer*/
-	if(!invalid)
+	else
 	{
-		if(host->subnet_buf_size == host->subnet_size)
-		{
-			host->subnets = realloc(host->subnets, 2*host->subnet_buf_size); //double size of array
-			host->subnet_buf_size *= 2;
-		}
-		/*add to list of subnets*/
-		struct route* old_sub = router_contains_subnet(cur_router->rt, current->prefix);
-		/*This is a check for that weird FAQ issue about initialzing subnets*/
-		/*Basically, if we initialized the connection at startup, then later received an LSU*/
-		if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask == current->mask)
-		{
-			old_sub->r_id = current->r_id;
-		}
-		else
-		{
 			memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
 			host->subnet_size++;
-		}	
 	}
 }
 

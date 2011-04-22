@@ -47,6 +47,7 @@ router to the internet
  mine do. This includes the issues about initializing the interface subnets to RID = 0, then
  having to change it later on based on hello packets
 -efficiency of ARP_cache delete method
+-free all malloced members of structs in buffers
  
  
 -probably some other stuff too

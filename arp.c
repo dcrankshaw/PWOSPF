@@ -38,7 +38,7 @@
 *   reply received.
 *
 ********************************************************************/
-struct arp_cache_entry* handle_ARP(struct packet_state * ps, struct sr_ethernet_hdr* eth)
+uint8_t* handle_ARP(struct packet_state * ps, struct sr_ethernet_hdr* eth)
 {
 	struct sr_arphdr *arp =0;
 
@@ -92,10 +92,10 @@ void got_Request(struct packet_state * ps, struct sr_arphdr * arp_hdr, const str
 /*******************************************************************
 *   Adds information from received ARP Reply to ARP Cache and returns newly added ARP Cache entry.
 *******************************************************************/
-struct arp_cache_entry* got_Reply(struct packet_state * ps, struct sr_arphdr * arp)
+uint8_t *got_Reply(struct packet_state * ps, struct sr_arphdr * arp)
 {
 	add_cache_entry(ps, arp->ar_sip, arp->ar_sha); /*Add IP and MAC address from reply to cache */
-	return search_cache(ps, arp->ar_sip); /*Return the newly added entry. */	
+	return search_cache(ps->sr, arp->ar_sip); /*Return the newly added entry. */	
 }
 
 /*******************************************************************
@@ -104,7 +104,7 @@ struct arp_cache_entry* got_Reply(struct packet_state * ps, struct sr_arphdr * a
 *******************************************************************/
 void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned char* mac)
 {
-	if(search_cache(ps, ip)==NULL) /*Entry is not already in cache so add. */
+	if(search_cache(ps->sr, ip)==NULL) /*Entry is not already in cache so add. */
 	{
         struct arp_cache_entry* cache_walker=0;
     
@@ -128,7 +128,7 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
             {
                 if(cache_walker->timenotvalid < time(NULL))
                 {
-                    cache_walker = delete_entry(ps,cache_walker);
+                    cache_walker = delete_entry(ps->sr,cache_walker);
                 }
                 else
                 {
@@ -155,7 +155,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
     /******NEED TO LOCK*****/
     
-    unsigned char* mac=(char *)malloc(ETHER_ADDR_LEN);
+    unsigned char* mac=(unsigned char *)malloc(ETHER_ADDR_LEN);
     
 	struct arp_cache_entry* cache_walker=0;
 	cache_walker=sr->arp_cache;
@@ -176,7 +176,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 		}
 		else                                        /*If the ARP entry has expired, delete. */
 		{
-			cache_walker = delete_entry(ps, cache_walker);
+			cache_walker = delete_entry(sr, cache_walker);
 		}
 	}
 	
@@ -202,7 +202,7 @@ struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_en
 			{
 				if(sr->arp_cache->next)
 				{
-					sr->arp_cache=ps->sr->arp_cache->next;
+					sr->arp_cache=sr->arp_cache->next;
 				}	
 				else
 				{
@@ -359,7 +359,7 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 	int eth_offset=sizeof(struct sr_ethernet_hdr);
 	
 	/* Put new Ethernet and ARP Header in Response */
-	uint8_t* arp_req=(uint8_t*) malloc(sizeof(uint8_t))
+	uint8_t* arp_req=(uint8_t*) malloc(sizeof(uint8_t));
 	memmove(arp_req, new_eth, eth_offset);
 	memmove((arp_req + eth_offset), request, sizeof(struct sr_arphdr));
 	
