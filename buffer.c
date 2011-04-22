@@ -251,3 +251,38 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
 	ps->res_len = 0; /* Reset packet state's response length to 0 */
 	return NULL;
 }
+
+
+struct sr_if* get_if_from_mac(struct sr_instance* sr, const char* mac)
+{
+	int len = ETHER_ADDR_LEN;
+	struct sr_if *current = sr->if_list;
+	int i;
+	int match = 0;
+	while(current)
+	{
+		for(i = 0; i < len; i++)
+		{
+			if(current->addr[i] != mac[i])
+			{
+				break;
+			}
+			else
+			{
+				match = 1;
+			}
+		}
+		if(match == 1)
+		{
+			return current;
+		}
+		else
+		{
+			current = current->next;
+		}
+	}
+}
+
+
+
+

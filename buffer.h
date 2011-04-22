@@ -44,5 +44,6 @@ void update_buffer(struct packet_state*,struct packet_buffer*);
 struct packet_buffer *buf_packet(struct packet_state *, uint8_t*, const struct in_addr, 
                                     const struct sr_if*, struct sr_ethernet_hdr*);
 struct packet_buffer* delete_from_buffer(struct packet_state*, struct packet_buffer*);
+struct sr_if* get_if_from_mac(struct sr_instance*, const char*);
 
 #endif

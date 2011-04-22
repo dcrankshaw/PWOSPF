@@ -18,6 +18,7 @@
 #include "sr_if.h"
 
 
+
 /* we dont like this debug , but what to do for varargs ? */
 #ifdef _DEBUG_
 #define Debug(x, args...) printf(x, ## args)
@@ -37,6 +38,7 @@ struct sr_if;
 struct sr_rt;
 
 struct pwospf_subsys;
+struct arp_subsys;
 
 /* ----------------------------------------------------------------------------
  * struct sr_instance
@@ -69,6 +71,9 @@ struct sr_instance
     
     /* -- pwospf subsystem -- */
     struct pwospf_subsys* ospf_subsys;
+    
+    /* -- arp subsystem -- */
+    struct arp_subsys* arp_sub;
 
     
 };

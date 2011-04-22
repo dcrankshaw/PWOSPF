@@ -27,7 +27,7 @@ struct route
 {
 	struct in_addr prefix;
 	struct in_addr mask;
-	/*struct in_addr next_hop;*/ /*probably don't need*/
+	struct in_addr next_hop; /*probably don't need*/
 	uint32_t r_id;
 
 };

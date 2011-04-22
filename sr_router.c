@@ -173,12 +173,12 @@ void sr_handlepacket(struct sr_instance* sr,
 	    free(head);
 	if(perm_eth)
 	    free(perm_eth);
-	/* Reset the response packet for updating the packet buffer */    
-	current.response = (uint8_t *)malloc(MAX_PAC_LENGTH);
+	/*Reset the response packet for updating the packet buffer */    
+	/*current.response = (uint8_t *)malloc(MAX_PAC_LENGTH);
 	current.res_len = 0;
 	update_buffer(&current, current.sr->queue);
     if(current.response)
-	    free(current.response);
+	    free(current.response);*/
 
     
 }
@@ -224,38 +224,43 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 		memmove(eth->ether_shost, sif->addr, ETHER_ADDR_LEN);
 		eth->ether_type = htons(ETHERTYPE_IP);
 		return 1;
-		
 	}
 	
 	
-	struct arp_cache_entry *ent;
+	char *mac = NULL;
+	struct in_addr nhop;
 	if(ps->dyn_entry)
 	{
-		ent = search_cache(ps, ps->dyn_entry->next_hop.s_addr);
+		nhop = ps->dyn_entry->next_hop;
+		
 	}
 	else
 	{
-		ent = search_cache(ps, ps->rt_entry->gw.s_addr);
+		nhop = ps->rt_entry->gw;
 	}
-	if(ent != NULL)
+	
+	mac = search_cache(sr, ps->dyn_entry->nhop.s_addr);
+	
+	if(mac != NULL)
 	{
 		struct sr_ethernet_hdr *eth = (struct sr_ethernet_hdr *) newpacket;
-		memmove(eth->ether_dhost, ent->mac, ETHER_ADDR_LEN);
+		memmove(eth->ether_dhost, mac, ETHER_ADDR_LEN);
 		memmove(eth->ether_shost, sif->addr, ETHER_ADDR_LEN);
 		eth->ether_type = htons(ETHERTYPE_IP);
 		return 1;
 	}
 	else
 	{
-		ps->response = newpacket;
+		/*ps->response = newpacket;
 		struct packet_buffer* current = buf_packet(ps,newpacket, new_iphdr->ip_dst,sif, eth_rec);
-		ps->response = newpacket;
-		send_request(ps,new_iphdr->ip_dst.s_addr);
-		current->num_arp_reqs=0;
-		current->arp_req=(uint8_t*)malloc(ps->res_len);
-		assert(current->arp_req);
-		memmove(current->arp_req, ps->response, ps->res_len);
-		current->arp_len = ps->res_len;
+				ps->response = newpacket;
+				send_request(ps,new_iphdr->ip_dst.s_addr);
+				current->num_arp_reqs=0;
+				current->arp_req=(uint8_t*)malloc(ps->res_len);
+				assert(current->arp_req);
+				memmove(current->arp_req, ps->response, ps->res_len);
+				current->arp_len = ps->res_len;*/
+		get_mac_address(ps->sr, nhop, newpacket, ps->res_len, sif->name, 0, eth->rec);
 		return 0;
 	}
 	return 0;

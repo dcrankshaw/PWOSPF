@@ -51,15 +51,28 @@ int pwospf_init(struct sr_instance* sr)
 	sr->ospf_subsys->fwrd_table = 0;
 	create_pwospf_ifaces(sr);
 	
-	/*TODO TODO TODO TODO*/
-	/*for this_router->subnets
-		mask = 255.255.255.254
-		prefix = iface_ip&mask
-		if(prefix % 2 == 0)
-			next_hop = prefix+1;
+	
+	int i = 0;
+	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
+	struct route* cur_sn = NULL;
+	while(cur_if)
+	{
+		cur_sn = sr->ospf_subsys->this_router->subnets[i];
+		cur_sn->mask = cur_if->mask;
+		cur_sn->prefix.s_addr = (cur_if->address.s_addr & cur_sn->mask.s_addr);
+		if(cur_if->address.s_addr % 2 == 0)
+		{
+			cur_sn->next_hop.s_addr = cur_if->address + 1;
+		}
 		else
-			next_hop = prefix - 1;
-	*/
+		{
+			cur_sn->next_hop.s_addr = cur_if->address - 1;
+		}
+		cur_sn->r_id = 0;
+	}
+	
+	/*TODO TODO TODO TODO*/
+	/* Probably need to initialize the forwarding table the same way */
 	
 	
 	char* i = "eth0";
@@ -200,6 +213,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
 
 void create_pwospf_ifaces(struct sr_instance *sr)
 {
+
 	struct sr_if *cur_sr_if = sr->if_list;
 	struct pwospf_iflist *cur_pw_if = sr->ospf_subsys->interfaces;
 	if(cur_sr_if != NULL)
