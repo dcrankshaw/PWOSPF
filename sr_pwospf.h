@@ -102,6 +102,7 @@ struct pwospf_subsys
     uint16_t last_seq_sent;
     uint32_t area_id;
     uint16_t autype;
+    struct lsu_buf_ent* lsu_buffer;
 
     /* -- thread and single lock for pwospf subsystem -- */
     pthread_t thread;

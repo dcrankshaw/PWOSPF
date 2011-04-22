@@ -59,7 +59,6 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
   
     set_sequence(pwospf->rid, lsu_head->seq, ps->sr);
     
-    /*** TODO: Forward LSU -mad*/
     /*Need packet to point to beginning of ospf header*/
     int i;
     for(i=0; i< lsu_head->num_adv; i++)
@@ -68,6 +67,8 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     }
     ps->packet-=sizeof(struct ospfv2_lsu_hdr);
     ps->packet-=sizeof(struct ospfv2_hdr);
+    
+    forward_lsu(ps, ps->sr, ps->packet, pwospf, ip_hdr);
     
     return 1;
   
