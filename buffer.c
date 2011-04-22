@@ -171,49 +171,27 @@ struct packet_buffer* delete_from_buffer(struct packet_state* ps, struct packet_
 /*******************************************************************
 *   Buffers a packet that is waiting on destination MAC address from ARP.
 *******************************************************************/
-struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const struct in_addr dest_ip, 
-                                    const struct sr_if* iface, struct sr_ethernet_hdr *orig_eth)
+struct packet_buffer * add_to_pack_buff(struct packet_buffer* buff, uint8_t* pac, uint16_t pack_len, 
+                                        struct sr_ethernet_hdr *orig_eth)
 {
 	struct packet_buffer* buf_walker=0;
-	struct ftable_entry *dyn_entry = get_dyn_routing_if(ps, dest_ip);
-	struct sr_rt* rt_entry=NULL;
 	
-	assert(ps);
-	assert(pac);
-	
-	if(ps->sr->queue==0) /* If Buffer is Empty.*/
+	if(buff==0) /* If Buffer is Empty.*/
 	{
-		ps->sr->queue=(struct packet_buffer*)malloc(sizeof(struct packet_buffer));
-		assert(ps->sr->queue);
+		buff=(struct packet_buffer*)malloc(sizeof(struct packet_buffer));
+		assert(buff);
 		
-		ps->sr->queue->next=0;
-		ps->sr->queue->packet=(uint8_t*)malloc(ps->res_len);
-		memmove(ps->sr->queue->packet, pac, ps->res_len);
-		ps->sr->queue->pack_len=ps->res_len;
+		buff->next=0;
+		buff->packet=(uint8_t*)malloc(pack_len);
+		memmove(buff->packet, pac, ps->res_len);
+		buff->pack_len=ps->res_len;
 		
-		
-		uint32_t tempgw = 0;
-		if(dyn_entry)
-		{
-			tempgw = dyn_entry->prefix.s_addr;
-		}
-		else
-		{
-			rt_entry=get_static_routing_if(ps, dest_ip);
-			tempgw = rt_entry->gw.s_addr;
-		}
-		ps->sr->queue->gw_IP=tempgw;
-		ps->sr->queue->interface=(char *)malloc(sr_IFACE_NAMELEN);
-		
-		memmove(ps->sr->queue->interface, iface, sr_IFACE_NAMELEN);
-		ps->sr->queue->ip_dst=dest_ip;
-		ps->sr->queue->num_arp_reqs=0;
 		ps->sr->queue->old_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 		memmove(ps->sr->queue->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
 	}
 	else /* Buffer is not Empty so Add to End. */
 	{
-		buf_walker=ps->sr->queue;
+		buf_walker=buff;
 		while(buf_walker->next)
 		{
 			buf_walker=buf_walker->next;
@@ -224,34 +202,15 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
 		buf_walker->next=0;
 		
 		buf_walker->packet=(uint8_t*)malloc(ps->res_len);
-		memmove(buf_walker->packet, pac, ps->res_len);
-		buf_walker->pack_len=ps->res_len;
-		buf_walker->interface=(char *)malloc(sr_IFACE_NAMELEN);
-		memmove(buf_walker->interface, iface->name, sr_IFACE_NAMELEN); 
-		buf_walker->ip_dst=dest_ip;
-		if(ps->dyn_entry)
-		{
-			ps->sr->queue->gw_IP=ps->dyn_entry->next_hop.s_addr;
-		}
-		else
-		{
-			ps->sr->queue->gw_IP=ps->rt_entry->gw.s_addr;
-		}
-		buf_walker->num_arp_reqs=0;
+		memmove(buf_walker->packet, pac, pack_len);
+		buf_walker->pack_len=pack_len;
 		buf_walker->old_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 		memmove(buf_walker->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
 		return buf_walker;
 	}
-	if(iface_dyn_entry)
-		free(iface_dyn_entry);
-	if(iface_rt_entry)
-		free(iface_rt_entry);
-	return ps->sr->queue;
-	
-	ps->res_len = 0; /* Reset packet state's response length to 0 */
+	/*Need to free pack and orig header??*/
 	return NULL;
 }
-
 
 struct sr_if* get_if_from_mac(struct sr_instance* sr, const char* mac)
 {
@@ -284,5 +243,113 @@ struct sr_if* get_if_from_mac(struct sr_instance* sr, const char* mac)
 }
 
 
+void send_all_packs(struct packet_buffer* buff, uint8_t* mac, char* iface, struct sr_instance* sr)
+{
+    struct packet_buffer* prev=buff;
+    while(buff)
+    {
+        struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)(buff->packet);
+        memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
+        sr_send_packet(sr, buff->packet, buff->pack_len, iface);
+        prev=buff;
+        buff=buff->next;
+        free(prev);
+    }
+    free(buff);
+    buff=NULL;
+}
 
-
+void delete_all_pack(struct packet_buffer* buff)
+ {
+    struct packet_buffer* prev=buff;
+    while(buff)
+    {
+        prev=buff;
+        buff=buff->next;
+        free(prev);
+    }
+    free(buff);
+    buff=NULL;
+ }
+ 
+ /*TODO: need an ICMP Port Unreachable that doesn't use ps */
+ void send_icmp(uint8_t* packet, uint16_t old_len, struct sr_ethernet_hdr* old_eth)
+ {
+    uint8_t* icmp_pac=(uint8_t*)malloc(sizeof(uint8_t));
+    uint16_t icmp_pac_len=0;
+    
+    uint16_t data_len=old_len-(sizeof(struct sr_ethernet_hdr +struct ip));
+    
+    packet+=sizeof(struct sr_ethernet_hdr);
+    struct ip* old_ip=(struct ip*)(packet);
+    
+    icmp_pac+=sizeof(struct sr_ethernet_hdr);
+    icmp_pac+=sizeof(struct ip);
+    
+    /*Create ICMP Header*/
+    struct icmp_hdr* icmp_head=(struct icmp_hdr*)icmp_pac;
+    icmp_head->icmp_type= ICMPT_DESTUN;
+    icmp_head->icmp_code= ICMPC_HOSTUN;
+    icmp_head->opt1=0;
+    icmp_head->opt2=0;
+    
+   /*Create ICMP Data*/
+   icmp_pac_len+=sizeof(struct icmp_hdr);
+    if(data_len >= ICMP_DATA_RES)
+    {
+        memmove(icmp_pac, packet, sizeof(struct ip)+ICMP_DATA_RES);
+        icmp_pac_len= icmp_pac_len+ sizeof(struct icmp_hdr) + ICMP_DATA_RES;
+    }
+    else
+    {
+        memmove(icmp_pac, packet, sizeof(struct ip) + data_len);
+        icmp_pac_len = icmp_pac_len+ sizeof(struct ip) + data_len;
+    }
+    
+    icmp_head->icmp_sum=0;
+    icmp_head->icmp_sum=ntohs(cksum((uint8_t*) icmp_pac, icmp_pac_len));
+    
+    
+    /*Create IP Header*/
+    icmp_pac-=sizeof(struct ip);
+    struct ip* new_ip=(struct ip*) icmp_pac;
+    memmove(new_ip, old_ip, sizeof(struct ip);
+    new_ip->ip_len=sizeof(struct ip)+icmp_pac_len;
+    new_ip->ip_ttl = INIT_TTL;
+	new_ip->ip_p = IPPROTO_ICMP;
+	
+	/* Find interface to send ICMP out of*/
+	
+	/*Finish Constructing IP header*/
+    new_ip->ip_src.s_addr = iface->ip;
+    new_ip->ip_dst = old_ip->ip_src;
+    new_ip->ip_sum = 0;
+    new_ip->ip_sum = cksum((uint8_t *)res_ip, sizeof(struct ip));
+    new_ip->ip_sum = htons(res_ip->ip_sum);
+    
+    /*Construct Ethernet Header*/
+    icmp_pack-=sizeof(struct sr_ethernet_hdr);
+    struct sr_ethernet_hdr* eth_resp=(struct sr_ethernet_hdr*)icmp_pack;
+    memmove(eth_resp->ether_dhost,old_eth->ether_shost,ETHER_ADDR_LEN);
+    
+    memmove(eth_resp->ether_shost,iface->addr, ETHER_ADDR_LEN);
+    eth_resp->ether_type=htons(ETHERTYPE_IP);
+    
+    icmp_pack_len=icmp_pack_len+sizeof(struct sr_ethernet_hdr) + sizeof(struct ip);
+    sr_send_packet(sr, icmp_pac, icmp_pack_len, iface->name);
+    
+ }
+ 
+ void send_all_icmps(struct packet_buffer* buff, struct sr_instance* sr)
+ {
+    struct packet_buffer* prev=buff;
+    while(buff)
+    {
+        send_icmp(buff->packet, buff->pack_len, buff->old_eth, sr);
+        prev=buff;
+        buff=buff->next;
+        free(prev);
+    }
+    free(buff);
+    buff=NULL;
+ }
