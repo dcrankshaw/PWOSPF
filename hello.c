@@ -34,11 +34,14 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 {
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;
+	
+	/*lock pwospf subsys*/
+	pwospf_lock(ps->sr->ospf_subsys);
 	struct pwospf_iflist* iface = ps->sr->ospf_subsys->interfaces;
 
 	if(ps->len < (sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr))) /* incorrectly sized packet */
 	{
-		printf("Malformed HELLO Packet.");
+		fprintf(stderr, "Malformed HELLO Packet.");
 		ps->res_len=0;
 	}
 	else /* correctly sized packet */
@@ -49,16 +52,17 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		/* check incoming packet values against ONLY the receiving interface in the interface list */
 		if(iface == 0)
 		{
-			printf("ERROR - INTERFACE LIST NOT INITIALIZED");
+			fprintf(stderr, "ERROR - INTERFACE LIST NOT INITIALIZED");
 		}
 		while(iface)
 		{
-			if(iface->name == ps->interface) /* if the current interface equals the incoming interface */
+			if(strcmp(iface->name, ps->interface) == 0) /* if the current interface equals the incoming interface */
 			{
 				if((iface->mask.s_addr != hello_hdr->nmask) || (iface->helloint != hello_hdr->helloint))
 				{
 					/* drop packet */
 					printf("HELLO doesn't match any interface - packet dropped");
+					pwospf_unlock(ps->sr->ospf_subsys);
 					return;
 				}
 
@@ -77,18 +81,22 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				else /* add to end of iface->neighbors (end of neighbor_list_walker) */
 				{
 					neighbor_list_walker = iface->neighbors;
+					struct neighbor_list* prev = NULL;
 					while(neighbor_list_walker != NULL)
 					{
+						if(neighbor_list_walker->timenotvalid < time(NULL))
+						{
+							neighbor_list_walker = delete_neighbor_list(iface, neighbor_list_walker, prev);
+						}
+						
 						if(neighbor_list_walker->ip_address.s_addr == ip_hdr->ip_src.s_addr) /* ?????????? SHOULD THIS BE COMPARING THE rid, NOT THE ip_address? */
 						{
 							neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
+							pwospf_unlock(ps->sr->ospf_subsys);
 							return;
 						}
-						if(neighbor_list_walker->timenotvalid < time(NULL))
-						{
-							neighbor_list_walker = delete_neighbor_list(iface, neighbor_list_walker);
-						}
 						
+						prev = neighbor_list_walker;
 						neighbor_list_walker = neighbor_list_walker->next;
 					}
 					/* no matching neighbor found - add new neighbor */
@@ -104,50 +112,34 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 			iface = iface->next;
 		}
 	}
+	pwospf_unlock(ps->sr->ospf_subsys);
 	return;
 }
 
 /*******************************************************************
 *   Deletes a neigbor_list_entry from neighbors.
 *******************************************************************/
-struct neighbor_list* delete_neighbor_list(struct pwospf_iflist* iface, struct neighbor_list* want_deleted)
+struct neighbor_list* delete_neighbor_list(struct pwospf_iflist* iface, struct neighbor_list* walker, struct neighbor_list* prev)
 {
-	struct neighbor_list* prev = 0;
-	struct neighbor_list* walker = 0;
-	walker = iface->neighbors;
-	
-	while(walker)
+		
+	if(prev == 0)          /* Item is first in list. */  
 	{
-		if(walker == want_deleted)    /* On item to be deleted in list. */
+		if(iface->neighbors->next)
 		{
-			if(prev == 0)          /* Item is first in list. */  
-			{
-				if(iface->neighbors->next)
-				{
-					iface->neighbors = iface->neighbors->next;
-				}	
-				else
-				{
-					iface->neighbors = NULL;
-				}
-				break;
-			}
-			else if(!walker->next) /* Item is last in list. */
-			{
-				prev->next = NULL;
-				break;
-			}
-			else                    /* Item is in the middle of list. */
-			{
-				prev->next = walker->next;
-				break;
-			}
-		}
+			iface->neighbors = iface->neighbors->next;
+		}	
 		else
 		{
-			prev = walker;
-			walker = walker->next;
+			iface->neighbors = NULL;
 		}
+	}
+	else if(!walker->next) /* Item is last in list. */
+	{
+		prev->next = NULL;
+	}
+	else                    /* Item is in the middle of list. */
+	{
+		prev->next = walker->next;
 	}
 	
 	/* Walker is still on item to be deleted so free that item. */

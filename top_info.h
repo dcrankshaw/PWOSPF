@@ -33,5 +33,9 @@ int reset_ftable(struct sr_instance *);
 void dijkstra(struct sr_instance*, struct router *);
 struct router* get_smallest_unknown(struct adj_list *);
 struct router* adj_list_contains(struct sr_instance *, uint32_t);
+void print_nbr_list(struct sr_instance *sr);
+void add_neighbor(struct sr_instance*, char *, uint32_t, struct in_addr);
+void print_nbr(struct neighbor_list* nbr);
+
 
 #endif

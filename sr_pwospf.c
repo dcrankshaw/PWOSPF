@@ -84,6 +84,7 @@ int pwospf_init(struct sr_instance* sr)
 		{
 			cur_sn->next_hop.s_addr = cur_if->address - temp.s_addr;
 		}*/
+		
 		cur_sn->next_hop.s_addr = temp.s_addr; /*THIS IS WRONG!!!!!!!!!!!!!!!!*/
 		cur_sn->r_id = 0;
 		i++;
@@ -169,6 +170,7 @@ void* pwospf_run_thread(void* arg)
         fprintf(stderr, "This is where we send LSU updates\n");
         pwospf_lock(sr->ospf_subsys);
         check_top_invalid(sr); /*Check for expired topo entries*/
+    	print_nbr_list(sr);
     	send_lsu(sr);
     	fprintf(stderr, "Finished Sending.\n");
         pwospf_unlock(sr->ospf_subsys);

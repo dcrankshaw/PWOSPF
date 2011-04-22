@@ -31,8 +31,31 @@ int remove_neighbor(void)
 	
 }
 
+void print_nbr_list(struct sr_instance *sr)
+{
+	struct pwospf_iflist* iface = sr->ospf_subsys->interfaces;
+	fprintf(stderr, "PRINTING NEIGHBOR LIST:\n");
+	while(iface)
+	{
+		fprintf(stderr, "interface %s\n", iface->name);
+		struct neighbor_list* nbr = iface->neighbors;
+		while(nbr)
+		{
+			print_nbr(nbr);
+			nbr = nbr->next;
+		}
+		fprintf(stderr, "\n");
+		iface = iface->next;
+	}
+	fprintf(stderr, "\n");
+}
 
-/*TODO: need struct in_addr nmask as another argument*/
+void print_nbr(struct neighbor_list* nbr)
+{
+	fprintf(stderr, "ID: %u\n", nbr->id);
+}
+
+
 void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct in_addr ip)
 {
 	struct pwospf_iflist *current_if = sr->ospf_subsys->interfaces;
