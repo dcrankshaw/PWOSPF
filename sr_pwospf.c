@@ -18,6 +18,7 @@
 #include "pwospf_protocol.h"
 #include "lsu.h"
 #include "hello.h"
+#include "top_info.h"
 
 #define FILENAME "ospf_config"
 
@@ -46,16 +47,21 @@ int pwospf_init(struct sr_instance* sr)
 
     /* -- handle subsystem initialization here! -- */
 	
+	sr->ospf_subsys->network = 0;
+	sr->ospf_subsys->fwrd_table = 0;
 	create_pwospf_ifaces(sr);
+	char* i = "eth0";
+	struct sr_if* zero = sr_get_interface(sr, i);
+	sr->ospf_subsys->this_router = add_new_router(sr, zero->ip);
+	sr->ospf_subsys->last_seq_sent = 0;
+	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
+	sr->ospf_subsys->autype = 0;
 
     /* -- start thread subsystem -- */
     if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) {
         perror("pthread_create");
         assert(0);
     }
-
-    /* -- read in ospf_config -- */
-	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
 
     return 0; /* success */
 } /* -- pwospf_init -- */

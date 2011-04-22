@@ -34,5 +34,4 @@ void dijkstra(struct sr_instance*, struct router *);
 struct router* get_smallest_unknown(struct adj_list *);
 struct router* adj_list_contains(struct sr_instance *, uint32_t);
 
-
 #endif
