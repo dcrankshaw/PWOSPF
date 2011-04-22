@@ -40,4 +40,6 @@ struct packet_buffer * add_to_pack_buff(struct packet_buffer*, uint8_t*, uint16_
 struct packet_buffer* delete_from_buffer(struct packet_state*, struct packet_buffer*);
 void send_all_packs(struct packet_buffer* , uint8_t, char*, struct sr_instance*);
 void delete_all_pack(struct packet_buffer* );
+void send_all_icmps(struct packet_buffer* , struct sr_instance* );
+void send_icmp(uint8_t* , uint16_t , struct sr_ethernet_hdr* );
 #endif

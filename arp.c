@@ -151,7 +151,7 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 *   Searches cache for entry based on IP address. Deletes any entries past expiration time. Returns 
 *   matching entry.
 *******************************************************************/
-struct arp_cache_entry* search_cache(struct sr_instance* sr,const uint32_t ip)
+uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
     /******NEED TO LOCK*****/
     

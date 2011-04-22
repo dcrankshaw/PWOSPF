@@ -42,24 +42,30 @@
  
  void send_all_lsus(struct lsu_buf_ent* buff, uint8_t* mac, char* iface, struct sr_instance* sr)
  {
-    struct lsu_buf_ent* buff_walker=buff;
+    struct lsu_buf_ent* prev=buff;
     
-    while(buff_walker)
+    while(buff)
     {
-        struct sr_ethernet_hdr eth_hdr=(struct sr_ethernet_hdr*)(buff_walker->packet);
+        struct sr_ethernet_hdr eth_hdr=(struct sr_ethernet_hdr*)(buff->packet);
         memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
-        sr_send_packet(sr, buff_walker->packet, buff_walker->pack_len, iface);
-        buff_walker=NULL; /*Deletes sent packets as it goes*/
-        buff_walker=buff_walker->next;
+        sr_send_packet(sr, buff->packet, buff->pack_len, iface);
+        prev=buff;
+        buff=buff->next;
+        free(prev);
     }
+    free(buff);
+    buff=NULL;
  }
  
  void delete_all_lsu(struct lsu_buf_ent* buff)
  {
+    struct lsu_buf_ent* prev=buff;
     while(buff)
     {
-        buff=NULL;
+        prev=buff;
         buff=buff->next;
+        free(prev);
     }
-    
+    free(buff);
+    buff=NULL;
  }
