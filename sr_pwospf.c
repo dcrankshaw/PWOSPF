@@ -40,23 +40,34 @@ int pwospf_init(struct sr_instance* sr)
 
     sr->ospf_subsys = (struct pwospf_subsys*)malloc(sizeof(struct pwospf_subsys));
     
-    sr->ospf_subsys->this_router->subnet_size=0;
 
     assert(sr->ospf_subsys);
     pthread_mutex_init(&(sr->ospf_subsys->lock), 0);
-
+	
     /* -- handle subsystem initialization here! -- */
+	
 	
 	sr->ospf_subsys->network = 0;
 	sr->ospf_subsys->fwrd_table = 0;
+	printf("about to create interfaces...\n");
 	create_pwospf_ifaces(sr);
+	printf("created interfaces\n");
 	
-	
+	char *eth0_interface = "eth0";
+	struct sr_if* zero = sr_get_interface(sr, eth0_interface);
+	sr->ospf_subsys->this_router = add_new_router(sr, zero->ip);
+	if(zero == NULL)
+	{
+		printf("null\n");
+	}
 	int i = 0;
 	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
 	struct route* cur_sn = NULL;
+	
 	while(cur_if)
 	{
+		
+		sr->ospf_subsys->this_router->subnets[i] = (struct route*)malloc(sizeof(struct route));
 		cur_sn = sr->ospf_subsys->this_router->subnets[i];
 		cur_sn->mask = cur_if->mask;
 		cur_sn->prefix.s_addr = (cur_if->address.s_addr & cur_sn->mask.s_addr);
@@ -75,14 +86,16 @@ int pwospf_init(struct sr_instance* sr)
 		}*/
 		cur_sn->next_hop.s_addr = temp.s_addr; /*THIS IS WRONG!!!!!!!!!!!!!!!!*/
 		cur_sn->r_id = 0;
+		i++;
+		cur_if = cur_if->next;	
 	}
 	
+	printf("a\n");
 	/*TODO TODO TODO TODO*/
 	/* Probably need to initialize the forwarding table the same way */
 	
 	
-	struct sr_if* zero = sr_get_interface(sr, "eth0");
-	sr->ospf_subsys->this_router = add_new_router(sr, zero->ip);
+	
 	sr->ospf_subsys->last_seq_sent = 0;
 	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
 	sr->ospf_subsys->autype = 0;
@@ -134,7 +147,7 @@ static
 void* pwospf_run_thread(void* arg)
 {
     struct sr_instance* sr = (struct sr_instance*)arg;
-
+	fprintf(stderr, "REACHED OSPF SUBSYSTEM THREAD");
     while(1)
     {
         /* -- PWOSPF subsystem functionality should start  here! -- */
@@ -270,5 +283,5 @@ uint32_t read_config(const char* filename)
 	{
 		sscanf(line, "%u", &aid);
 	}
-	return 1;
+	return aid;
 }

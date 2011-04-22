@@ -65,7 +65,11 @@ void sr_init(struct sr_instance* sr)
 	char *if_config = IFACE_CONFIG;
 	assert(init_if_config(sr, if_config));
 	print_if_config(sr);
-	pwospf_init(sr);
+	printf("Reached here\n");
+	/*pwospf_init(sr);*/
+	printf("OSPF succesfully initialized\n");
+	
+	arp_init(sr);
 	
 	
 	printf("\n\n");

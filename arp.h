@@ -25,7 +25,7 @@ struct arp_cache_entry
     struct arp_cache_entry* next;
 };
 
-
+void arp_init(struct sr_instance*);
 uint8_t* handle_ARP(struct packet_state*, struct sr_ethernet_hdr*);
 void got_Request(struct packet_state*, struct sr_arphdr*, const struct sr_ethernet_hdr*);
 uint8_t* got_Reply(struct packet_state *, struct sr_arphdr *);

@@ -55,6 +55,16 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 	unlock_arp_q(sr->arp_sub);
 }
 
+void arp_init(struct sr_instance* sr)
+{
+	sr->arp_sub = (struct arp_subsys*) malloc(sizeof(struct arp_subsys));
+	sr->arp_sub->arp_cache = NULL;
+	sr->arp_sub->pending = NULL;
+	pthread_mutex_init(&(sr->arp_sub->arp_q_lock), 0);
+	pthread_mutex_init(&(sr->arp_sub->cache_lock), 0);
+	
+}
+
 struct arpq* get_entry(struct sr_instance *sr, struct in_addr next_hop)
 {
 	/* TODO TODO TODO TODO */

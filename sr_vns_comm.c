@@ -43,6 +43,7 @@
 
 #include "sha1.h"
 #include "vnscommand.h"
+#include "sr_pwospf.h"
 
 static void sr_log_packet(struct sr_instance* , uint8_t* , int );
 static int  sr_arp_req_not_for_us(struct sr_instance* sr,
@@ -462,6 +463,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
                 fprintf(stderr,"Routing table not consistent with hardware\n");
                 return -1;
             }
+            pwospf_init(sr);
             printf(" <-- Ready to process packets --> \n");
             break;
 
