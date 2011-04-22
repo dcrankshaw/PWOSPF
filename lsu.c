@@ -232,6 +232,7 @@ void send_lsu(struct sr_instance* sr)
             }
             else
             {
+                fprintf(stderr, "About to get mac\n");
                 get_mac_address(sr, ip_hdr->ip_dst, pack, pack_len, iface_walker->name, 1, NULL);
                 /**** NEED TO FREE ****/
             }

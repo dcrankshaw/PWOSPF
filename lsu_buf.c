@@ -28,6 +28,7 @@
     
     if(buff==0)
     {
+        fprintf(stderr, "Buff is empty\n");
         buff=(struct lsu_buf_ent*)malloc(sizeof(struct lsu_buf_ent));
         buff->next=0;
         buff->lsu_packet=(uint8_t*)malloc(pack_len);
@@ -37,6 +38,7 @@
     }
     else
     {
+        fprintf(stderr, "Buff isn't empty.\n");
         buf_walker=buff;
         while(buf_walker->next)
         {

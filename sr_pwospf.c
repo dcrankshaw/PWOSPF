@@ -154,6 +154,7 @@ void* pwospf_run_thread(void* arg)
         /* -- PWOSPF subsystem functionality should start  here! -- */
 
         int i;
+        /*
         for(i = 0; i < OSPF_DEFAULT_LSUINT; i += OSPF_DEFAULT_HELLOINT)
         {
         	fprintf(stderr, "This is where we send Hello packets\n");
@@ -161,20 +162,23 @@ void* pwospf_run_thread(void* arg)
         	send_HELLO(sr);
         	pwospf_unlock(sr->ospf_subsys);
         	sleep(OSPF_DEFAULT_HELLOINT);
-        }
+        }*/
         /*Send LSU updates*/
         
         
-        
+        fprintf(stderr, "This is where we send Hello packets\n");
+        pwospf_lock(sr->ospf_subsys);
+        send_HELLO(sr);
+        pwospf_unlock(sr->ospf_subsys);
+        sleep(OSPF_DEFAULT_HELLOINT);
         
         fprintf(stderr, "This is where we send LSU updates\n");
         pwospf_lock(sr->ospf_subsys);
         check_top_invalid(sr); /*Check for expired topo entries*/
     	print_nbr_list(sr);
     	send_lsu(sr);
-    	fprintf(stderr, "Finished Sending.\n");
         pwospf_unlock(sr->ospf_subsys);
-        //sleep(OSPF_DEFAULT_HELLOINT); /*****For debugging *****/
+        sleep(OSPF_DEFAULT_HELLOINT); /*****For debugging *****/
         
         
        /* pwospf_lock(sr->ospf_subsys);
@@ -191,26 +195,34 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     fprintf(stderr, "Got to handle_pwospf\n");
     ps->packet+=sizeof(struct ip);
     struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*)(ps->packet);
+    fprintf(stderr, "Type: %u\n", pwospf_hdr->type);
     if(pwospf_hdr->version!=2)
     {
+        fprintf(stderr, "Invalid version.\n");
         return 0;
     }
     /*Verify Checksum*/
-    uint16_t csum_cal=0;
-    pwospf_hdr->audata=0;
-    csum_cal=cksum((uint8_t*) pwospf_hdr, sizeof(struct ospfv2_hdr));
+    /*
+    uint16_t csum_cal;
+    fprintf(stderr, "Length of ospfv2_hdr: %d\n", sizeof(struct ospfv2_hdr));
+    csum_cal=cksum((uint8_t*) pwospf_hdr, (sizeof(struct ospfv2_hdr)-8));
+    csum_cal=htons(csum_cal);
     if(csum_cal!=pwospf_hdr->csum)
     {
+        fprintf(stderr, "Calc Checksum: %u Pack Checksum: %u \n", csum_cal, pwospf_hdr->csum);
+        fprintf(stderr, "Wrong Checksum.\n");
         return 0;
-    }
+    }*/
     
     if(pwospf_hdr->aid!=ps->sr->ospf_subsys->area_id)
     {
+        fprintf(stderr, "Wrong Area ID.\n");
         return 0;
     }
     
     if(pwospf_hdr->autype!=ps->sr->ospf_subsys->autype)
     {
+        fprintf(stderr, "Wrong Auth Type.\n");
         return 0;
     }
     

@@ -330,6 +330,7 @@ int handle_ip(struct packet_state *ps)
 		/*Deals with router as destination*/
 		if(!found_case)
 		{
+		    fprintf(stderr, "Router is dest.\n");
 			struct sr_if *iface = ps->sr->if_list;
 
 			while(iface != NULL)
@@ -352,6 +353,7 @@ int handle_ip(struct packet_state *ps)
 							else if(ip_hdr->ip_p == IPPROTO_TCP 
 								||ip_hdr->ip_p == IPPROTO_UDP)
 							{
+							    fprintf(stderr, "TCP or UDP packet.\n");
 								if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 								{
 									src_port = *((uint16_t*)ps->packet);
@@ -368,6 +370,7 @@ int handle_ip(struct packet_state *ps)
 
 							else if(ip_hdr->ip_p == OSPFV2_TYPE)
 							{
+							    fprintf(stderr, "OSPF packet.\n");
 								handle_pwospf(ps, ip_hdr);
 								return 0; /* Tells handle_packet not to try to send packet*/
 
@@ -380,8 +383,16 @@ int handle_ip(struct packet_state *ps)
 					leave_hdr_room(ps, ip_offset);
 					if(ip_hdr->ip_p == IPPROTO_ICMP)
 					{
+					    
 						handle_icmp(ps, ip_hdr);
 					}
+					else if(ip_hdr->ip_p == OSPFV2_TYPE)
+                    {
+                        fprintf(stderr, "OSPF packet.\n");
+                        handle_pwospf(ps, ip_hdr);
+                        return 0; /* Tells handle_packet not to try to send packet*/
+
+                    }
 					else
 					{
 						icmp_response(ps, ip_hdr, ICMPT_DESTUN, ICMPC_PORTUN);
@@ -402,6 +413,13 @@ int handle_ip(struct packet_state *ps)
 					iph->ip_sum = htons(iph->ip_sum);
 					return 1;
 				}
+				else if(ip_hdr->ip_dst.s_addr== OSPF_AllSPFRouters)
+				{
+                    fprintf(stderr, "OSPF packet.\n");
+                    handle_pwospf(ps, ip_hdr);
+                    return 0; /* Tells handle_packet not to try to send packet*/
+
+                }
 				else
 				{
 					iface = iface->next;
@@ -463,6 +481,7 @@ int handle_ip(struct packet_state *ps)
 						}
 						else if(ip_hdr->ip_p == OSPFV2_TYPE)
 						{
+						    fprintf(stderr, "OSPF packet.\n");
 							handle_pwospf(ps, ip_hdr);
 							return 0; /* Tells handle_packet not to try to send packet
 										This gets handled internally in the function*/
@@ -564,6 +583,7 @@ uint16_t cksum(uint8_t *buff, int len)
 	}
 	
 	sum = ~sum;
+	//fprintf(stderr, "checksum in the method: %u\n", ((uint16_t) sum));
 	return ((uint16_t) sum);
 
 }

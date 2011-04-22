@@ -324,7 +324,7 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 	request->ar_pro=htons(ARP_PRO_IP);
 	request->ar_hln=ETHER_ADDR_LEN;
 	request->ar_pln=ARP_IP_LEN;
-	request->ar_op=htons(ARP_REQUEST);
+	request->ar_op=ARP_REQUEST;
 	
 	/* Find source interface */
 	struct sr_if* iface=sr_get_interface(sr, interface); /*Find iface associated with rt entry */
@@ -369,6 +369,7 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 	if(new_eth)	
 		free(new_eth);
 		
+    fprintf(stderr, "Constructed arp.\n");
 	return arp_req;
 }
 

@@ -22,31 +22,37 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 	struct arpq* entry = get_entry(sr, next_hop);
 	if(entry != NULL)
 	{
+	    fprintf(stderr, "Arpq entry found.\n");
 		/*TODO: check if expired entry*/
 		if(type == LSU)
 		{
 			add_to_lsu_buff(entry->lsu_buf, packet, len);
+			fprintf(stderr, "added to lsu buff\n");
 		}
 		else
 		{
 			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
+			fprintf(stderr, "added to packet buff\n");
 		}
 	}
 	else
 	{
+	    fprintf(stderr, "Arpq entry not found.\n");
 		entry = create_entry(sr, sr->arp_sub, next_hop, iface);
 		if(type == LSU)
 		{
 			add_to_lsu_buff(entry->lsu_buf, packet, len);
+			fprintf(stderr, "added to lsu buff\n");
 		}
 		else
 		{
 			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
+			fprintf(stderr, "added to packet buff\n");
 		}
 		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
 		args->sr = sr;
 		args->entry = entry;
-		if(pthread_create(&entry->arp_thread, 0, arp_req_init, sr))
+		if(pthread_create(&entry->arp_thread, 0, arp_req_init, args))
 		{
         	perror("pthread_create");
         	assert(0);
@@ -55,6 +61,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 	unlock_arp_q(sr->arp_sub);
 }
 
+/*Initialize the arp subsystem*/
 void arp_init(struct sr_instance* sr)
 {
 	sr->arp_sub = (struct arp_subsys*) malloc(sizeof(struct arp_subsys));
@@ -131,7 +138,7 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 	entry->ip = next_hop;
 	entry->num_requests = 0;
 	/*This method needs to return an arp packet*/
-	entry->request_len = 0;
+	entry->request_len = sizeof(struct sr_ethernet_hdr) + (sizeof(struct sr_arphdr));
 	entry->arp_request = construct_request(sr, iface, next_hop.s_addr);
 	entry->pac_buf = NULL;
 	entry->lsu_buf = NULL;

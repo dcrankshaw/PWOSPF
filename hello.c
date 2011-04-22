@@ -32,6 +32,7 @@ Including their IP address, netmask, and MAC address
 ********************************************************************/
 void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 {
+    fprintf(stderr, "in handle_hello\n");
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;
 	
@@ -61,7 +62,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				if((iface->mask.s_addr != hello_hdr->nmask) || (iface->helloint != hello_hdr->helloint))
 				{
 					/* drop packet */
-					printf("HELLO doesn't match any interface - packet dropped");
+					fprintf(stderr,"HELLO doesn't match any interface - packet dropped");
 					pwospf_unlock(ps->sr->ospf_subsys);
 					return;
 				}
@@ -71,6 +72,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		
 				if(iface->neighbors == 0) /* no neighbors known - add new neighbor */
 				{
+				    fprintf(stderr,"Neigbhors is empty\n");
 					iface->neighbors = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
 					assert(iface->neighbors);
 					iface->neighbors->next = 0;
@@ -80,6 +82,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				}
 				else /* add to end of iface->neighbors (end of neighbor_list_walker) */
 				{
+				    fprintf(stderr,"Neigbhors isn't empty\n");
 					neighbor_list_walker = iface->neighbors;
 					struct neighbor_list* prev = NULL;
 					while(neighbor_list_walker != NULL)
@@ -107,6 +110,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 					neighbor_list_walker->id = pwospf_hdr->rid;
 					neighbor_list_walker->ip_address = ip_hdr->ip_src;
 					neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
+					fprintf(stderr, "Added to neighbors\n");
 				}
 			}
 			iface = iface->next;
@@ -223,7 +227,7 @@ void send_HELLO(struct sr_instance* sr)
 	eth_hdr->ether_type=htons(ETHERTYPE_IP);
 
 	/* Set IP destination IP address to 224.0.0.5 (0xe0000005) (Broadcast) */
-	ip_hdr->ip_hl = sizeof(struct ip)/4;
+	ip_hdr->ip_hl = (sizeof(struct ip))/4;
 	ip_hdr->ip_v = IP_VERSION;
 	ip_hdr->ip_tos=ROUTINE_SERVICE;
 	ip_hdr->ip_len = packet_size - sizeof(struct sr_ethernet_hdr);
@@ -258,7 +262,7 @@ void send_HELLO(struct sr_instance* sr)
 		
 		hello_hdr->nmask = iface->mask.s_addr;
 		pwospf_hdr->csum = 0;
-	    pwospf_hdr->csum = cksum((uint8_t *)pwospf_hdr, sizeof(struct ospfv2_hdr)); 
+	    pwospf_hdr->csum = cksum((uint8_t *)pwospf_hdr, sizeof(struct ospfv2_hdr)-8); 
 	    pwospf_hdr->csum = htons(pwospf_hdr->csum);
 		
 		
