@@ -151,17 +151,26 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 *   Searches cache for entry based on IP address. Deletes any entries past expiration time. Returns 
 *   matching entry.
 *******************************************************************/
-struct arp_cache_entry* search_cache(struct packet_state *ps,const uint32_t ip)
+struct arp_cache_entry* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
+    /******NEED TO LOCK*****/
+    
+    unsigned char* mac=(char *)malloc(ETHER_ADDR_LEN);
+    
 	struct arp_cache_entry* cache_walker=0;
-	cache_walker=ps->sr->arp_cache;
+	cache_walker=sr->arp_cache;
 	while(cache_walker) 
 	{
 	    time_t curr_time=time(NULL);
 		if(cache_walker->timenotvalid > curr_time)  /*Check if entry has expired. */
 		{
 			if(ip==cache_walker->ip_add)
-				return cache_walker;
+			{
+		
+				memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
+				/***UNLONCK HERE*****/
+				return mac;
+			}
 			else
 				cache_walker = cache_walker->next;
 		}
@@ -172,17 +181,18 @@ struct arp_cache_entry* search_cache(struct packet_state *ps,const uint32_t ip)
 	}
 	
 	/*IP Address is not in cache. */
+	/****UNLOCK HERE******/
 	return NULL;
 }
 
 /*******************************************************************
 *   Deletes entry from cache.
 *******************************************************************/
-struct arp_cache_entry* delete_entry(struct packet_state *ps, struct arp_cache_entry* want_deleted)
+struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_entry* want_deleted)
 {
 	struct arp_cache_entry* prev=0;
 	struct arp_cache_entry* walker=0;
-	walker=ps->sr->arp_cache;
+	walker=sr->arp_cache;
 	
 	while(walker)
 	{
@@ -190,13 +200,13 @@ struct arp_cache_entry* delete_entry(struct packet_state *ps, struct arp_cache_e
 		{
 			if(prev==0)             /* Item is first in cache. */  
 			{
-				if(ps->sr->arp_cache->next)
+				if(sr->arp_cache->next)
 				{
-					ps->sr->arp_cache=ps->sr->arp_cache->next;
+					sr->arp_cache=ps->sr->arp_cache->next;
 				}	
 				else
 				{
-					ps->sr->arp_cache = NULL;
+					sr->arp_cache = NULL;
 				}
 				break;
 			}
@@ -265,7 +275,8 @@ void print_cache_entry(struct arp_cache_entry * ent)
 /*******************************************************************
 *   Constructs Reply to an ARP Request.
 *******************************************************************/
-void construct_reply(struct packet_state* ps, const struct sr_arphdr* arp_hdr, const unsigned char* mac, const struct sr_ethernet_hdr* eth)
+void construct_reply(struct packet_state* ps, const struct sr_arphdr* arp_hdr, 
+                        const unsigned char* mac, const struct sr_ethernet_hdr* eth)
 {
     /* Construct ARP Reply Header*/
 	struct sr_arphdr *reply;
@@ -304,7 +315,7 @@ void construct_reply(struct packet_state* ps, const struct sr_arphdr* arp_hdr, c
 /*******************************************************************
 *   Constructs appropriate ARP Request based on a packet to be forwarded.
 *******************************************************************/
-void send_request(struct packet_state* ps, const uint32_t dest_ip)
+uint8_t* construct_request(struct sr_instance* sr, const char* interface,const uint32_t ip_addr)
 {
 	/*Construct ARP Header*/
 	struct sr_arphdr* request;
@@ -316,23 +327,9 @@ void send_request(struct packet_state* ps, const uint32_t dest_ip)
 	request->ar_op=htons(ARP_REQUEST);
 	
 	/* Find source interface */
-	struct in_addr ip_d;
-	ip_d.s_addr=dest_ip;
-	char *temp_if = NULL;
-	struct ftable_entry *iface_dyn_entry = get_dyn_routing_if(ps, ip_d);
-	struct sr_rt* iface_rt_entry = NULL;
-	if(iface_dyn_entry != NULL)
-	{
-		temp_if = iface_dyn_entry->interface;
-	}
-	else
-	{
-		iface_rt_entry=get_static_routing_if(ps, ip_d);          /*Find rt entry to send request from. */
-		temp_if = iface_rt_entry->interface;
-	}
-	struct sr_if* iface=sr_get_interface(ps->sr, temp_if); /*Find iface associated with rt entry */
+	struct sr_if* iface=sr_get_interface(sr, interface); /*Find iface associated with rt entry */
 	assert(iface); 
-	memmove(request->ar_sha, iface->addr, ETHER_ADDR_LEN); /*Set ARP source address to interface's hardware address */
+	memmove(request->ar_sha, iface->addr, ETHER_ADDR_LEN);
 	request->ar_sip=iface->ip;  /*Set ARP source IP address to interface's IP address */
 	
 	/* Set ARP dest MAC address to 00:00:00:00:00:00 */
@@ -342,15 +339,7 @@ void send_request(struct packet_state* ps, const uint32_t dest_ip)
 		request->ar_tha[i]=0x00;
 	}
 	
-	/*Set ARP target IP address to interface's gateway IP address */
-	if(iface_dyn_entry)
-	{
-		request->ar_tip=iface_dyn_entry->next_hop.s_addr; 
-	}
-	else
-	{
-		request->ar_tip=iface_rt_entry->gw.s_addr; 
-	}
+	request->ar_tip=ip_addr;
 	
 	
 	
@@ -358,9 +347,6 @@ void send_request(struct packet_state* ps, const uint32_t dest_ip)
 	struct sr_ethernet_hdr* new_eth;
 	new_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 	memmove(new_eth->ether_shost, iface->addr,ETHER_ADDR_LEN); /*Ethernet Source Address is Interface's Address */
-	
-	ps->dyn_entry = iface_dyn_entry;
-	ps->rt_entry = iface_rt_entry; /*******************/
 	
 	/*Set Ethernet dest MAC address to ff:ff:ff:ff:ff:ff (Broadcast) */
 	for(i=0; i<ETHER_ADDR_LEN; i++)
@@ -373,20 +359,17 @@ void send_request(struct packet_state* ps, const uint32_t dest_ip)
 	int eth_offset=sizeof(struct sr_ethernet_hdr);
 	
 	/* Put new Ethernet and ARP Header in Response */
-	memmove(ps->response, new_eth, eth_offset);
-	memmove((ps->response + eth_offset), request, sizeof(struct sr_arphdr));
+	uint8_t* arp_req=(uint8_t*) malloc(sizeof(uint8_t))
+	memmove(arp_req, new_eth, eth_offset);
+	memmove((arp_req + eth_offset), request, sizeof(struct sr_arphdr));
 	
 	/*Free Construct ARP and Ethernet Headers */
 	if(request)
 		free(request);
 	if(new_eth)	
 		free(new_eth);
-	if(iface_dyn_entry)
-		free(iface_dyn_entry);
-	if(iface_rt_entry)
-		free(iface_rt_entry);
 		
-	ps->res_len=eth_offset + sizeof(struct sr_arphdr);
+	return arp_req;
 }
 
 

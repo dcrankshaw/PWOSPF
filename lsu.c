@@ -128,7 +128,7 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
 }
 
 
-void send_lsu(struct sr_instance* sr, struct packet_state* ps)
+void send_lsu(struct sr_instance* sr)
 {
     struct router* my_router=sr->ospf_subsys->this_router;
     uint8_t* pack=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+
@@ -215,7 +215,7 @@ void send_lsu(struct sr_instance* sr, struct packet_state* ps)
             memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
             
             /*Find MAC Address of source*/
-            struct arp_cache_entry* arp_ent=search_cache(ps, ip_hdr->ip_dst.s_addr);
+            struct arp_cache_entry* arp_ent=search_cache(sr, ip_hdr->ip_dst.s_addr);
             if(arp_ent!=NULL)
             {
                 memmove(eth_hdr->ether_dhost, arp_ent->mac, ETHER_ADDR_LEN);

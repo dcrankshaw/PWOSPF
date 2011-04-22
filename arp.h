@@ -35,7 +35,7 @@ struct arp_cache_entry* search_cache(struct packet_state*,const uint32_t);
 void print_cache_entry(struct arp_cache_entry*);
 void print_cache(struct sr_instance*);
 void construct_reply(struct packet_state*, const struct sr_arphdr*, const unsigned char*, const struct sr_ethernet_hdr*);
-void send_request(struct packet_state*, const uint32_t);
+uint8_t* construct_request(struct sr_instance*, const char*,const uint32_t);
 /*void testing(struct packet_state*, struct sr_arphdr *);*/
 
 #endif

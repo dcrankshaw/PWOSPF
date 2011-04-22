@@ -171,49 +171,27 @@ struct packet_buffer* delete_from_buffer(struct packet_state* ps, struct packet_
 /*******************************************************************
 *   Buffers a packet that is waiting on destination MAC address from ARP.
 *******************************************************************/
-struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const struct in_addr dest_ip, 
-                                    const struct sr_if* iface, struct sr_ethernet_hdr *orig_eth)
+struct packet_buffer * add_to_pack_buff(struct packet_buffer* buff, uint8_t* pac, uint16_t pack_len, 
+                                        struct sr_ethernet_hdr *orig_eth)
 {
 	struct packet_buffer* buf_walker=0;
-	struct ftable_entry *dyn_entry = get_dyn_routing_if(ps, dest_ip);
-	struct sr_rt* rt_entry=NULL;
 	
-	assert(ps);
-	assert(pac);
-	
-	if(ps->sr->queue==0) /* If Buffer is Empty.*/
+	if(buff==0) /* If Buffer is Empty.*/
 	{
-		ps->sr->queue=(struct packet_buffer*)malloc(sizeof(struct packet_buffer));
-		assert(ps->sr->queue);
+		buff=(struct packet_buffer*)malloc(sizeof(struct packet_buffer));
+		assert(buff);
 		
-		ps->sr->queue->next=0;
-		ps->sr->queue->packet=(uint8_t*)malloc(ps->res_len);
-		memmove(ps->sr->queue->packet, pac, ps->res_len);
-		ps->sr->queue->pack_len=ps->res_len;
+		buff->next=0;
+		buff->packet=(uint8_t*)malloc(pack_len);
+		memmove(buff->packet, pac, ps->res_len);
+		buff->pack_len=ps->res_len;
 		
-		
-		uint32_t tempgw = 0;
-		if(dyn_entry)
-		{
-			tempgw = dyn_entry->prefix.s_addr;
-		}
-		else
-		{
-			rt_entry=get_static_routing_if(ps, dest_ip);
-			tempgw = rt_entry->gw.s_addr;
-		}
-		ps->sr->queue->gw_IP=tempgw;
-		ps->sr->queue->interface=(char *)malloc(sr_IFACE_NAMELEN);
-		
-		memmove(ps->sr->queue->interface, iface, sr_IFACE_NAMELEN);
-		ps->sr->queue->ip_dst=dest_ip;
-		ps->sr->queue->num_arp_reqs=0;
 		ps->sr->queue->old_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 		memmove(ps->sr->queue->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
 	}
 	else /* Buffer is not Empty so Add to End. */
 	{
-		buf_walker=ps->sr->queue;
+		buf_walker=buff;
 		while(buf_walker->next)
 		{
 			buf_walker=buf_walker->next;
@@ -224,30 +202,40 @@ struct packet_buffer * buf_packet(struct packet_state *ps, uint8_t* pac, const s
 		buf_walker->next=0;
 		
 		buf_walker->packet=(uint8_t*)malloc(ps->res_len);
-		memmove(buf_walker->packet, pac, ps->res_len);
-		buf_walker->pack_len=ps->res_len;
-		buf_walker->interface=(char *)malloc(sr_IFACE_NAMELEN);
-		memmove(buf_walker->interface, iface->name, sr_IFACE_NAMELEN); 
-		buf_walker->ip_dst=dest_ip;
-		if(ps->dyn_entry)
-		{
-			ps->sr->queue->gw_IP=ps->dyn_entry->next_hop.s_addr;
-		}
-		else
-		{
-			ps->sr->queue->gw_IP=ps->rt_entry->gw.s_addr;
-		}
-		buf_walker->num_arp_reqs=0;
+		memmove(buf_walker->packet, pac, pack_len);
+		buf_walker->pack_len=pack_len;
 		buf_walker->old_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 		memmove(buf_walker->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
 		return buf_walker;
 	}
-	if(iface_dyn_entry)
-		free(iface_dyn_entry);
-	if(iface_rt_entry)
-		free(iface_rt_entry);
-	return ps->sr->queue;
-	
-	ps->res_len = 0; /* Reset packet state's response length to 0 */
+	/*Need to free pack and orig header??*/
 	return NULL;
 }
+
+void send_all_packs(struct packet_buffer* buff, uint8_t* mac, char* iface, struct sr_instance* sr)
+{
+    struct packet_buffer* buff_walker=buff;
+    while(buff_walker)
+    {
+        struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)(buff_walker->packet);
+        memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
+        sr_send_packet(sr, buff_walker->packet, buff_walker->pack_len, iface);
+        buff_walker=NULL; /*Deletes entries as it goes */
+        buff_walker=buff_walker->next;
+    }
+}
+
+void delete_all_pack(struct packet_buffer* buff)
+ {
+    while(buff)
+    {
+        buff=NULL;
+        buff=buff->next;
+    }
+ }
+ 
+ /*TODO: need an ICMP Port Unreachable that doesn't use ps */
+ void send_all_icmp()
+ {
+  
+ }

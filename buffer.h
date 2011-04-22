@@ -29,20 +29,15 @@ struct packet_buffer
 {
 	uint8_t* packet;            /*Packet that wants to be forwarded. */
 	uint16_t pack_len;
-	char *interface;            /*Interface to send packet out of. */
-	uint8_t* arp_req;           /*ARP Request sent for this packet. */
-	uint16_t arp_len;
-	struct in_addr ip_dst;      /* Ultimate Destination IP Address */
-	struct packet_buffer *next;
-	int num_arp_reqs; 	        /* The number of arp requests already sent. */
-	uint32_t gw_IP;             /* IP address where packet will be sent to. (Next hop based on interface). */
 	struct sr_ethernet_hdr* old_eth; /*Original ethernet header*/
+	struct packet_buffer *next;
 };
 
 
 void update_buffer(struct packet_state*,struct packet_buffer*);
-struct packet_buffer *buf_packet(struct packet_state *, uint8_t*, const struct in_addr, 
-                                    const struct sr_if*, struct sr_ethernet_hdr*);
+struct packet_buffer * add_to_pack_buff(struct packet_buffer*, uint8_t*, uint16_t, 
+                                        struct sr_ethernet_hdr *);
 struct packet_buffer* delete_from_buffer(struct packet_state*, struct packet_buffer*);
-
+void send_all_packs(struct packet_buffer* , uint8_t, char*, struct sr_instance*);
+void delete_all_pack(struct packet_buffer* );
 #endif
