@@ -296,6 +296,7 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
  *---------------------------------------------------------------------*/
 int handle_ip(struct packet_state *ps)
 {
+    fprintf(stderr, "in handle_ip\n");
 	/*Load IP header*/
 
 	if(ps->len < sizeof(struct ip))
