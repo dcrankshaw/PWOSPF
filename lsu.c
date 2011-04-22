@@ -14,6 +14,7 @@
 #include "top_info.h"
 #include "lsu.h"
 #include "arp.h"
+#include "arpq.h"
 
 int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip_hdr)
 {
@@ -131,6 +132,7 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
 void send_lsu(struct sr_instance* sr)
 {
     struct router* my_router=sr->ospf_subsys->this_router;
+    
     uint8_t* pack=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+
             sizeof(struct ip)+sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr)
             + ((my_router->subnet_size)*(sizeof(struct ospfv2_lsu_hdr))));
@@ -168,10 +170,10 @@ void send_lsu(struct sr_instance* sr)
     pwospf_hdr->type=OSPF_TYPE_LSU;
     /*For length do I include ip and ethernet hdrs too???? */
     pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv));
-    pwospf_hdr->rid=my_router->rid;
-    pwospf_hdr->aid= /*Where are we keeping the aid??*/
-    pwospf_hdr->autype=0;
-    pwospf_hdr->audata=0;
+    pwospf_hdr->rid=sr->ospf_subsys->this_router->rid;
+    pwospf_hdr->aid= sr->ospf_subsys->area_id;
+    pwospf_hdr->autype=OSPF_DEFAULT_AUTHKEY;
+    pwospf_hdr->audata=OSPF_DEFAULT_AUTHKEY;
     pwospf_hdr->csum=0;
     pwospf_hdr->csum=cksum((uint8_t*)(pwospf_hdr), sizeof(struct ospfv2_hdr));
     pwospf_hdr->csum=htons(pwospf_hdr->csum);
@@ -184,11 +186,13 @@ void send_lsu(struct sr_instance* sr)
     ip_hdr->ip_hl=(sizeof(struct ip))/4;
     ip_hdr->ip_v=IP_VERSION;
     ip_hdr->ip_tos=ROUTINE_SERVICE;
-    ip_hdr->ip_len=sizeof(struct ip)/4;
-    ip_hdr->ip_id=/*TODO*/
-    ip_hdr->ip_off=/*TODO*/
+    ip_hdr->ip_len=sizeof(struct ip) + pwospf_hdr->len;
+    ip_hdr->ip_id=0;
+    ip_hdr->ip_off=0;
     ip_hdr->ip_ttl= INIT_TTL;
     ip_hdr->ip_p=OSPFV2_TYPE;
+    
+    uint16_t pack_len= sizeof(struct sr_ethernet_hdr) + ip_hdr->ip_len;
   
     struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
     while(iface_walker)
@@ -214,27 +218,30 @@ void send_lsu(struct sr_instance* sr)
             struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
             memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
             
-            /*Find MAC Address of source*/
+            fprintf(stderr, "Find dest Mac Address\n");
+            /*Find MAC Address of dest*/
            uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);
             if(mac!=NULL)
             {
                 memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
                 memmove(pack, eth_hdr, sizeof(struct sr_ethernet_hdr));
-                sr_send_packet(sr, pack, sizeof(pack), iface_walker->name);
+                sr_send_packet(sr, pack, pack_len , iface_walker->name);
                 /*Packet has been sent*/
             }
             else
             {
-                /*Need to buffer and then send ARP*/
+                get_mac_address(sr, ip_hdr->ip_dst, pack, pack_len, iface_walker->name, 1, NULL);
+                /**** NEED TO FREE ****/
             }
-            
+            neigh_walker=neigh_walker->next;
         }
-
+        iface_walker=iface_walker->next;
     } 
 }
 
 struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr)
 {
+    fprintf(stderr, "Generate Advs\n");
     struct router * my_router = sr->ospf_subsys->this_router;
     if(my_router==NULL);
         return NULL;

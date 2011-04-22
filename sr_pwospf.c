@@ -147,7 +147,7 @@ static
 void* pwospf_run_thread(void* arg)
 {
     struct sr_instance* sr = (struct sr_instance*)arg;
-	fprintf(stderr, "REACHED OSPF SUBSYSTEM THREAD");
+	fprintf(stderr, "REACHED OSPF SUBSYSTEM THREAD\n");
     while(1)
     {
         /* -- PWOSPF subsystem functionality should start  here! -- */
@@ -155,7 +155,7 @@ void* pwospf_run_thread(void* arg)
         int i;
         for(i = 0; i < OSPF_DEFAULT_LSUINT; i += OSPF_DEFAULT_HELLOINT)
         {
-        	printf("This is where we send Hello packets");
+        	fprintf(stderr, "This is where we send Hello packets\n");
         	pwospf_lock(sr->ospf_subsys);
         	send_HELLO(sr);
         	pwospf_unlock(sr->ospf_subsys);
@@ -166,12 +166,13 @@ void* pwospf_run_thread(void* arg)
         
         
         
-        printf("This is where we send LSU updates");
+        fprintf(stderr, "This is where we send LSU updates\n");
         pwospf_lock(sr->ospf_subsys);
         check_top_invalid(sr); /*Check for expired topo entries*/
     	send_lsu(sr);
+    	fprintf(stderr, "Finished Sending.\n");
         pwospf_unlock(sr->ospf_subsys);
-        
+        //sleep(OSPF_DEFAULT_HELLOINT); /*****For debugging *****/
         
         
        /* pwospf_lock(sr->ospf_subsys);
