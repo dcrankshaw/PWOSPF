@@ -103,7 +103,7 @@ void* arp_req_init(void* a)
 	{
 		
 		/*TODO: decide on args*/
-		send_all_icmp(args->entry->pac_buf, args->sr);
+		send_all_icmps(args->entry->pac_buf, args->sr);
 		delete_all_lsu(args->entry->lsu_buf);
 	}
 	args->entry->num_requests = -1;

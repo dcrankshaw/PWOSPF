@@ -41,6 +41,6 @@ struct sr_if* get_if_from_mac(struct sr_instance*, unsigned char*);
 
 void send_all_packs(struct packet_buffer* , uint8_t*, char*, struct sr_instance*);
 void delete_all_pack(struct packet_buffer* );
-void send_all_icmp(struct packet_buffer* , struct sr_instance* );
+void send_all_icmps(struct packet_buffer* , struct sr_instance* );
 void send_icmp(struct sr_instance*, uint8_t* , uint16_t , struct sr_ethernet_hdr* );
 #endif

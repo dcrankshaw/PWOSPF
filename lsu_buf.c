@@ -4,9 +4,24 @@
  * CS344
  * 4/26/2011
  **********************************************************************/
+ #include <stdlib.h>
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "sr_if.h"
+#include "sr_rt.h"
+#include "sr_router.h"
+#include "sr_protocol.h"
+#include "sr_pwospf.h"
+#include "pwospf_protocol.h"
+#include "top_info.h"
+#include "lsu.h"
+#include "arp.h"
+#include "lsu_buf.h"
  
- struct lsu_buf_ent* add_to_lsu_buff(struct lsu_buf_ent* buff, uint8_t* pack, 
-            uint16_t pack_len)
+ 
+ struct lsu_buf_ent* add_to_lsu_buff(struct lsu_buf_ent* buff, uint8_t* pack, uint16_t pack_len)
  {
     struct lsu_buf_ent* buf_walker=0;
     buf_walker=buff;
@@ -15,10 +30,10 @@
     {
         buff=(struct lsu_buf_ent*)malloc(sizeof(struct lsu_buf_ent));
         buff->next=0;
-        buff->lsu_packet=(struct uint8_t*)malloc(pack_len);
+        buff->lsu_packet=(uint8_t*)malloc(pack_len);
         memmove(buff->lsu_packet,pack, pack_len);
         buff->pack_len=pack_len;
-        return sr->lsu_buffer;
+        return buff;
     }
     else
     {
@@ -46,9 +61,9 @@
     
     while(buff)
     {
-        struct sr_ethernet_hdr eth_hdr=(struct sr_ethernet_hdr*)(buff->packet);
+        struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)(buff->lsu_packet);
         memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
-        sr_send_packet(sr, buff->packet, buff->pack_len, iface);
+        sr_send_packet(sr, buff->lsu_packet, buff->pack_len, iface);
         prev=buff;
         buff=buff->next;
         free(prev);
