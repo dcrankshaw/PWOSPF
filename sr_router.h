@@ -57,7 +57,9 @@ struct sr_instance
     struct sr_if* if_list; /* list of interfaces */
     struct sr_rt* routing_table; /* routing table */
     FILE* logfile;
+    
     struct arp_cache_entry* arp_cache;
+    
     struct packet_buffer* queue;
     struct ft_entry* flow_table;
     struct ft_entry* rules;

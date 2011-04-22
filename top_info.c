@@ -31,7 +31,7 @@ int remove_neighbor(void)
 }
 
 
-
+/*TODO: need struct in_addr nmask as another argument*/
 void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct in_addr ip)
 {
 	struct pwospf_iflist *current_if = sr->ospf_subsys->interfaces;
@@ -83,6 +83,12 @@ void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct
 			break;
 		}
 	}
+	
+	/*Also need to add support to add neighbors to sr->ospf_subsys->this_router->subnets
+		can match based on incoming mask, prefix (from ip&mask), then check if the matching
+		subnet rid == 0. If it is, update it to router_id. Else add a new entry to subnets with
+		the found mask, prefix, but with router_id (indicates two routers on same subnet
+		with switch).*/
 
 
 }
@@ -300,7 +306,7 @@ int router_contains(struct route* rt, struct router *host)
 }
 
 /*May not need this method???*/
-struct route* router_contains_subnet(uint32_t prefix, struct router* host)
+struct route* router_contains_subnet(struct router* host, uint32_t prefix)
 {
 	int i;
 	for(i = 0; i < host->subnet_size; i++)
@@ -359,6 +365,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 		}
 		if(!added)
 		{
+			/*create new route*/
 			struct router *new_adj = add_new_router(sr, current->rid);
 			host->adjacencies[host->adj_size] = new_adj;
 			host->adj_size++;
@@ -378,8 +385,18 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 			host->subnet_buf_size *= 2;
 		}
 		/*add to list of subnets*/
-		memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
-		host->subnet_size++;
+		struct route* old_sub = router_contains_subnet(cur_router->rt, current->prefix);
+		/*This is a check for that weird FAQ issue about initialzing subnets*/
+		/*Basically, if we initialized the connection at startup, then later received an LSU*/
+		if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask == current->mask)
+		{
+			old_sub->r_id = current->r_id;
+		}
+		else
+		{
+			memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
+			host->subnet_size++;
+		}	
 	}
 }
 
@@ -663,30 +680,3 @@ struct router* get_smallest_unknown(struct adj_list *current)
 	return least_unknown;
 }
 
-uint16_t get_sequence(uint32_t router_id, struct sr_instance *sr)
-{
-    struct adj_list* net_walker=sr->ospf_subsys->network;
-    while(net_walker)
-    {
-        if(net_walker->rt->rid==router_id)
-        {
-            return net_walker->rt->last_seq;
-        }
-        else
-            net_walker=net_walker->next;
-    }
-    return 0;
-}
-void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
-{
-    struct adj_list* net_walker=sr->ospf_subsys->network;
-    while(net_walker)
-    {
-        if(net_walker->rt->rid==router_id)
-        {
-            net_walker->rt->last_seq=sequence;
-        }
-        else
-            net_walker=net_walker->next;
-    }
-}

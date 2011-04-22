@@ -50,6 +50,18 @@ int pwospf_init(struct sr_instance* sr)
 	sr->ospf_subsys->network = 0;
 	sr->ospf_subsys->fwrd_table = 0;
 	create_pwospf_ifaces(sr);
+	
+	/*TODO TODO TODO TODO*/
+	/*for this_router->subnets
+		mask = 255.255.255.254
+		prefix = iface_ip&mask
+		if(prefix % 2 == 0)
+			next_hop = prefix+1;
+		else
+			next_hop = prefix - 1;
+	*/
+	
+	
 	char* i = "eth0";
 	struct sr_if* zero = sr_get_interface(sr, i);
 	sr->ospf_subsys->this_router = add_new_router(sr, zero->ip);

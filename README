@@ -5,13 +5,26 @@ Group 1
       Dan Crankshaw
       Maddie Stone
       Adam Gross
+      
+      
+      
+      
+Add a note to the final writeup about efficiency and implementation writeups
 
 TODO:
 *-write remove methods for the neighborlist
+-Go through top_info, lsu, hello to figure out where exactly we need to lock ospf_subsys
 -all threading
 	-including possibly ARP
 -buffering LSU packets
 
+-make sure that everywhere that I assume 2-IP subnet won't cause problems with the default
+router to the internet
+		-this may be okay because the default route is in the static routing table
+-finish ospf_subsystem initialization
+-Finish resolving issues between what Adam's add and delete neighbor methods do and what
+ mine do. This includes the issues about initializing the interface subnets to RID = 0, then
+ having to change it later on based on hello packets
 
 -probably some other stuff too
 
@@ -24,7 +37,7 @@ DONE?
  properties of the router, and will this affect Dijkstra's at all)
  		-add check to make sure that router's with same subnet don't advertise different neighbors
  		 (*see better comment in the code)
- -I think I still need to update the LSUTIMEOUT's of each route struct when I add to them
+-I think I still need to update the LSUTIMEOUT's of each route struct when I add to them
 	-also need to check whether they are expired or not probably
 -write set and get sequence methods
 -handle ospf packets (in sr_router.c) - method stub is there, it just needs to be written
