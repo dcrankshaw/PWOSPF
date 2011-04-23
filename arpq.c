@@ -74,10 +74,15 @@ void arp_init(struct sr_instance* sr)
 
 struct arpq* get_entry(struct sr_instance *sr, struct in_addr next_hop)
 {
-	/* TODO TODO TODO TODO */
-	
+	struct arpq* current = sr->arp_sub->pending;
+	while(current)
+	{
+		if(current->ip.s_addr == next_hop.s_addr)
+		{
+			return current;
+		}
+	}
 	return NULL;
-
 }
 
 void* arp_req_init(void* a)

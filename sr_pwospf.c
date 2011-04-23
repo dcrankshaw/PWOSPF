@@ -72,7 +72,16 @@ int pwospf_init(struct sr_instance* sr)
 		cur_sn->mask = cur_if->mask;
 		cur_sn->prefix.s_addr = (cur_if->address.s_addr & cur_sn->mask.s_addr);
 		struct in_addr temp;
-		temp.s_addr = 1;
+		temp.s_addr = 0x1;
+		if((cur_if->address.s_addr & cur_if->mask.s_addr) == cur_if->address.s_addr)
+		{
+			cur_sn->next_hop.s_addr = (cur_if->address.s_addr | temp.s_addr);
+		}
+		else
+		{
+			cur_sn->next_hop.s_addr = (cur_if->address.s_addr & cur_if->mask.s_addr);
+		}
+		
 		
 		/* won't compile because of invalid binary operand nonsense*/
 		/*if(cur_if->address.s_addr % 2 == 0)
@@ -85,7 +94,6 @@ int pwospf_init(struct sr_instance* sr)
 			cur_sn->next_hop.s_addr = cur_if->address - temp.s_addr;
 		}*/
 		
-		cur_sn->next_hop.s_addr = temp.s_addr; /*THIS IS WRONG!!!!!!!!!!!!!!!!*/
 		cur_sn->r_id = 0;
 		i++;
 		cur_if = cur_if->next;	

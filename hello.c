@@ -227,7 +227,9 @@ void send_HELLO(struct sr_instance* sr)
 	eth_hdr->ether_type=htons(ETHERTYPE_IP);
 
 	/* Set IP destination IP address to 224.0.0.5 (0xe0000005) (Broadcast) */
+	
 	ip_hdr->ip_hl = (sizeof(struct ip))/4;
+	fprintf(stderr, "IP header length: %u\n", ip_hdr->ip_hl);
 	ip_hdr->ip_v = IP_VERSION;
 	ip_hdr->ip_tos=ROUTINE_SERVICE;
 	ip_hdr->ip_len = packet_size - sizeof(struct sr_ethernet_hdr);

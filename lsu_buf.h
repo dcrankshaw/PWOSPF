@@ -5,10 +5,10 @@
  * 4/26/2011
  **********************************************************************/
  
- #ifndef LSUBUFFER_H
- #define LSUBUFFER_H
+#ifndef LSUBUFFER_H
+#define LSUBUFFER_H
  
- #include "sr_router.h"
+#include "sr_router.h"
 #include "sr_if.h"
 #include "sr_rt.h"
 #include "sr_protocol.h"
