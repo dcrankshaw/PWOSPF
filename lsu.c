@@ -160,9 +160,9 @@ void send_lsu(struct sr_instance* sr)
     
     /*Generate LSU Header */
     struct ospfv2_lsu_hdr* lsu_hdr=(struct ospfv2_lsu_hdr*)malloc(sizeof(struct ospfv2_lsu_hdr));
-    lsu_hdr->seq=sr->ospf_subsys->last_seq_sent;
+    lsu_hdr->seq=htons(sr->ospf_subsys->last_seq_sent);
     lsu_hdr->ttl=INIT_TTL;
-    lsu_hdr->num_adv=my_router->subnet_size;
+    lsu_hdr->num_adv=htonl(my_router->subnet_size);
     
     memmove(pack,lsu_hdr, sizeof(struct ospfv2_lsu_hdr));
     pack-=(sizeof(struct ospfv2_hdr));
@@ -174,7 +174,7 @@ void send_lsu(struct sr_instance* sr)
     /*For length do I include ip and ethernet hdrs too???? */
     pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv));
     pwospf_hdr->rid=sr->ospf_subsys->this_router->rid;
-    pwospf_hdr->aid= sr->ospf_subsys->area_id;
+    pwospf_hdr->aid= htonl(sr->ospf_subsys->area_id);
     pwospf_hdr->autype=OSPF_DEFAULT_AUTHKEY;
     pwospf_hdr->audata=OSPF_DEFAULT_AUTHKEY;
     pwospf_hdr->csum=0;
@@ -189,7 +189,7 @@ void send_lsu(struct sr_instance* sr)
     ip_hdr->ip_hl=(sizeof(struct ip))/4;
     ip_hdr->ip_v=IP_VERSION;
     ip_hdr->ip_tos=ROUTINE_SERVICE;
-    ip_hdr->ip_len=sizeof(struct ip) + pwospf_hdr->len;
+    ip_hdr->ip_len=htons(sizeof(struct ip) + pwospf_hdr->len);
     ip_hdr->ip_id=0;
     ip_hdr->ip_off=0;
     ip_hdr->ip_ttl= INIT_TTL;
@@ -217,7 +217,7 @@ void send_lsu(struct sr_instance* sr)
             
             /*Generate Ethernet Header*/
             struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
-            eth_hdr->ether_type=ETHERTYPE_IP;
+            eth_hdr->ether_type=htons(ETHERTYPE_IP);
             
             /*Find Interface to be sent out of's MAC Address*/
             struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
@@ -257,18 +257,20 @@ void send_lsu(struct sr_instance* sr)
 struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr)
 {
     fprintf(stderr, "Generate Advs\n");
-    struct router * my_router = sr->ospf_subsys->this_router;
-    if(my_router==NULL);
+    if(sr->ospf_subsys->this_router==NULL)
         return NULL;
-        
+    
+    fprintf(stderr, "Num of subnets: %d\n", sr->ospf_subsys->this_router->subnet_size);
+    
     int i;
-    for(i=0; i<my_router->subnet_size; i++)
+    for(i=0; i<sr->ospf_subsys->this_router->subnet_size; i++)
     {
-        struct route* temp_rt=my_router->subnets[i];
+        fprintf(stderr, "Generating an adv\n");
+        struct route* temp_rt=sr->ospf_subsys->this_router->subnets[i];
         struct ospfv2_lsu_adv new_adv;
         new_adv.subnet=temp_rt->prefix.s_addr;
-        new_adv.mask=temp_rt->mask.s_addr;
-        new_adv.rid=temp_rt->r_id;
+        new_adv.mask=htonl(temp_rt->mask.s_addr);
+        new_adv.rid=htonl(temp_rt->r_id);
         advs[i]=new_adv;
     }
     

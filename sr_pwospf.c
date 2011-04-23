@@ -39,7 +39,6 @@ int pwospf_init(struct sr_instance* sr)
     assert(sr);
 
     sr->ospf_subsys = (struct pwospf_subsys*)malloc(sizeof(struct pwospf_subsys));
-    
 
     assert(sr->ospf_subsys);
     pthread_mutex_init(&(sr->ospf_subsys->lock), 0);
@@ -95,6 +94,7 @@ int pwospf_init(struct sr_instance* sr)
 		}*/
 		
 		cur_sn->r_id = 0;
+		sr->ospf_subsys->this_router->subnet_size++;
 		i++;
 		cur_if = cur_if->next;	
 	}
