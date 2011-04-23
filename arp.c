@@ -327,9 +327,10 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 	{
 		eth_hdr->ether_dhost[i]=0xff;
 	}
+	
 	eth_hdr->ether_type=htons(ETHERTYPE_ARP);
 	struct sr_if* iface=sr_get_interface(sr, interface);
-	memmove(eth_hdr, iface->addr, ETHER_ADDR_LEN);
+	memmove(eth_hdr->ether_shost, iface->addr, ETHER_ADDR_LEN);
 	
 	struct sr_arphdr* arp_hdr=(struct sr_arphdr*)(request+sizeof(struct sr_ethernet_hdr));
 	arp_hdr->ar_hrd=htons(ARP_HRD_ETH);
@@ -361,6 +362,12 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 	
 	fprintf(stderr, "\n\n");
 	
+	fprintf(stderr,"Ether dhost: ");
+	for(i=0; i< ETHER_ADDR_LEN; i++)
+	{
+	    fprintf(stderr, "%x ", eth_hdr->ether_dhost[i]);
+	}
+	fprintf(stderr,"\n");
 	
 	return request;
 	
