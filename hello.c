@@ -127,9 +127,10 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				struct route* old_sub = router_contains_subnet(ps->sr->ospf_subsys->this_router, new_pref.s_addr);
 				/*This is a check for that weird FAQ issue about initialzing subnets*/
 				/*Basically, if we initialized the connection at startup, then later received an LSU*/
-				if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask.s_addr == hello_hdr->nmask)
+				if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask.s_addr == ntohl(hello_hdr->nmask))
 				{
-						old_sub->r_id = pwospf_hdr->rid;
+						fprintf(stderr, "Changing RID\n");
+						old_sub->r_id = ntohl(pwospf_hdr->rid);
 				}
 			}
 			if(found)
