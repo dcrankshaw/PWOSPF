@@ -8,7 +8,6 @@ uint16_t get_sequence(uint32_t router_id, struct sr_instance *sr);
 void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr);
 /*searches adjacency list for a router with the given id*/
 struct router *search_topo(struct sr_instance, uint32_t);
-int remove_neighbor(void);
 void add_neighbor(struct sr_instance*, char *, uint32_t, struct in_addr);
 /*checks whether there are any expired entries in the topoology*/
 void check_top_invalid(struct sr_instance *);

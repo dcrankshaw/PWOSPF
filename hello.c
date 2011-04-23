@@ -32,7 +32,7 @@ Including their IP address, netmask, and MAC address
 ********************************************************************/
 void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 {
-    fprintf(stderr, "in handle_hello\n");
+    fprintf(stderr, "In handle_hello\n");
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;
 	
@@ -74,7 +74,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		
 				if(iface->neighbors == 0) /* no neighbors known - add new neighbor */
 				{
-				    fprintf(stderr,"Neigbhors is empty\n");
 					iface->neighbors = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
 					assert(iface->neighbors);
 					iface->neighbors->next = 0;
@@ -85,7 +84,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				}
 				else /* add to end of iface->neighbors (end of neighbor_list_walker) */
 				{
-				    fprintf(stderr,"Neighbors isn't empty\n");
 					neighbor_list_walker = iface->neighbors;
 					struct neighbor_list* prev = NULL;
 					while(neighbor_list_walker != NULL)
@@ -115,7 +113,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
                         neighbor_list_walker->id = pwospf_hdr->rid;
                         neighbor_list_walker->ip_address = ip_hdr->ip_src;
                         neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
-                        fprintf(stderr, "Added to neighbors\n");
                         found = 1;
 				    }
 				}
@@ -123,13 +120,11 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				
 				struct in_addr new_pref;
 				new_pref.s_addr = (ip_hdr->ip_src.s_addr & htonl(hello_hdr->nmask));
-				fprintf(stderr, "Updating router id for prefix: %s\n", inet_ntoa(new_pref));
 				struct route* old_sub = router_contains_subnet(ps->sr->ospf_subsys->this_router, new_pref.s_addr);
 				/*This is a check for that weird FAQ issue about initialzing subnets*/
 				/*Basically, if we initialized the connection at startup, then later received an LSU*/
 				if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask.s_addr == ntohl(hello_hdr->nmask))
 				{
-						fprintf(stderr, "Changing RID\n");
 						old_sub->r_id = ntohl(pwospf_hdr->rid);
 				}
 			}

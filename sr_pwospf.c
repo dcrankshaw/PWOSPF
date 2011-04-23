@@ -204,18 +204,17 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
         return 0;
     }
     /*Verify Checksum*/
-    /*
-    uint16_t csum_cal;
-    fprintf(stderr, "Length of ospfv2_hdr: %lu\n", sizeof(struct ospfv2_hdr));
+    uint16_t csum_cal, old_csum;
+    old_csum=pwospf_hdr->csum;
+    pwospf_hdr->csum=0;
     csum_cal=cksum((uint8_t*) pwospf_hdr, (sizeof(struct ospfv2_hdr)-8));
     csum_cal=htons(csum_cal);
-    if(csum_cal!=pwospf_hdr->csum)
+    if(csum_cal!=old_csum)
     {
         fprintf(stderr, "Calc Checksum: %u Pack Checksum: %u \n", csum_cal, pwospf_hdr->csum);
         fprintf(stderr, "Wrong Checksum.\n");
         return 0;
-    }*/
-    
+    }
     if(pwospf_hdr->aid!=ntohl(ps->sr->ospf_subsys->area_id))
     {
         fprintf(stderr, "Wrong Area ID.\n");

@@ -16,21 +16,7 @@
 #include "top_info.h"
 #include "pwospf_protocol.h"
 
-
-int remove_neighbor(void)
-{
-	/*
-	* -use if a neighbor gets removed from the interface list
-	* -will need to make sure that the neighbor gets removed from the topology as well??
-	*/
-	
-	/*-Remove from neighbor list
-		-remove from ospf_subsys->this_router->subnets, adjacencies*/
-		printf("Currently unimplemented");
-		return 0;
-	
-}
-
+/*NOT THREADSAFE*/
 void print_nbr_list(struct sr_instance *sr)
 {
 	struct pwospf_iflist* iface = sr->ospf_subsys->interfaces;
@@ -50,12 +36,13 @@ void print_nbr_list(struct sr_instance *sr)
 	fprintf(stderr, "\n");
 }
 
+/*THREADSAFE*/
 void print_nbr(struct neighbor_list* nbr)
 {
 	fprintf(stderr, "ID: %u\n", nbr->id);
 }
 
-
+/*NOT THREADSAFE*/
 void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct in_addr ip)
 {
 	struct pwospf_iflist *current_if = sr->ospf_subsys->interfaces;
@@ -117,9 +104,11 @@ void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct
 
 }
 
+/*THREADSAFE*/
 /*checks whether there are any expired entries in the topoology*/
 void check_top_invalid(struct sr_instance *sr)
 {
+	pwospf_lock(sr->ospf_subsys);
 	struct adj_list *current = sr->ospf_subsys->network;
 	time_t now = time(NULL);
 	struct adj_list *prev = NULL;
@@ -152,8 +141,10 @@ void check_top_invalid(struct sr_instance *sr)
 			current = current->next;
 		}
 	}
+	pwospf_unlock(sr->ospf_subsys);
 }
 
+/*THREADSAFE*/
 /*removes from the given router's subnet list and adjacency list*/
 int remove_subnet_from_router(struct sr_instance *sr, struct router *rt, struct route *subnet)
 {
@@ -187,6 +178,7 @@ int remove_subnet_from_router(struct sr_instance *sr, struct router *rt, struct 
 	return 1;
 }
 
+/*THREADSAFE*/
 int remove_rt_sn_using_id(struct sr_instance *sr, struct router *rt, uint32_t id)
 {
 		/*decrease size, remove appropriate subnet, move last subnet into empty spot in the array
@@ -216,6 +208,7 @@ int remove_rt_sn_using_id(struct sr_instance *sr, struct router *rt, uint32_t id
 	return 1;
 }
 
+/*THREADSAFE*/
 int route_cmp(struct route* r1, struct route* r2)
 {
 	if((r1->prefix.s_addr == r2->prefix.s_addr) && (r1->mask.s_addr == r2->mask.s_addr) && (r1->r_id == r2->r_id))
@@ -226,6 +219,7 @@ int route_cmp(struct route* r1, struct route* r2)
 }
 
 /*TODO*/
+/*NOT THREADSAFE*/
 int remove_from_topo(struct sr_instance *sr, struct router *rt)
 {
 	int i;
@@ -255,11 +249,11 @@ int remove_from_topo(struct sr_instance *sr, struct router *rt)
 
 /* called when LSU packets are received. Adds to the adjacency list */
 
-/*TODO: What if we get an LSU that advertises a link connecting to a router we don't
-know about?*/
+/*NOT THREADSAFE*/
 int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_routes,
 				int num_ads)
 {
+	pwospf_lock(sr->ospf_subsys);
 	struct router* host = adj_list_contains(sr, host_rid);
 	if(host != NULL)
 	{
@@ -283,9 +277,11 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 	
 	dijkstra(sr, sr->ospf_subsys->this_router);
 	update_ftable(sr);
+	pwospf_unlock(sr->ospf_subsys);
 	return 1;
 }
 
+/*NOT THREADSAFE*/
 struct router* adj_list_contains(struct sr_instance *sr, uint32_t id)
 {
 	struct adj_list *current = sr->ospf_subsys->network;
@@ -299,7 +295,7 @@ struct router* adj_list_contains(struct sr_instance *sr, uint32_t id)
 	return NULL;
 }
 
-
+/*THREADSAFE*/
 void add_to_existing_router(struct sr_instance *sr, struct route **routes, struct router* host, int num_ads)
 {
 	/*TODO: this is pretty inefficient, it may be alright though if these stay small enough */
@@ -315,6 +311,7 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 		}
 }
 
+/*THREADSAFE*/
 int router_contains(struct route* rt, struct router *host)
 {
 	int i;
@@ -328,7 +325,7 @@ int router_contains(struct route* rt, struct router *host)
 	return 0;
 }
 
-/*May not need this method???*/
+/*THREADSAFE*/
 struct route* router_contains_subnet(struct router* host, uint32_t prefix)
 {
 	int i;
@@ -343,6 +340,7 @@ struct route* router_contains_subnet(struct router* host, uint32_t prefix)
 
 }
 
+/*THREADSAFE*/
 void add_new_route(struct sr_instance *sr, struct route* current, struct router* host)
 {
 	
@@ -431,6 +429,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 	}
 }
 
+/*NOT THREADSAFE*/
 struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 {
 	struct router* new_router = (struct router*)malloc(sizeof(struct router));
@@ -479,6 +478,7 @@ struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 	return NULL;
 }
 
+/*NOT THREADSAFE*/
 void get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrret,
 						struct sr_instance *sr, uint32_t id)
 {
@@ -515,7 +515,7 @@ void get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrr
 	}
 }
 
-
+/*NOT THREADSAFE*/
 int update_ftable(struct sr_instance *sr)
 {
 	reset_ftable(sr);
@@ -599,6 +599,7 @@ int update_ftable(struct sr_instance *sr)
 	
 }
 
+/*NOT THREADSAFE*/
 struct router* find_next_hop(struct sr_instance *sr, struct router *dest, int *hops)
 {
 	int numhops = 0;
@@ -619,6 +620,7 @@ struct router* find_next_hop(struct sr_instance *sr, struct router *dest, int *h
 	return cur;
 }
 
+/*NOT THREADSAFE*/
 struct ftable_entry *ftable_contains(struct sr_instance *sr, struct in_addr pfix, struct in_addr mask)
 {
 	struct ftable_entry *current = sr->ospf_subsys->fwrd_table;
@@ -636,6 +638,7 @@ struct ftable_entry *ftable_contains(struct sr_instance *sr, struct in_addr pfix
 	return NULL;
 }
 
+/*NOT THREADSAFE*/
 int reset_ftable(struct sr_instance *sr)
 {
 	struct ftable_entry *current = sr->ospf_subsys->fwrd_table;
@@ -652,7 +655,7 @@ int reset_ftable(struct sr_instance *sr)
 
 
 
-
+/*NOT THREADSAFE*/
 void dijkstra(struct sr_instance* sr, struct router *host)
 {
 	struct adj_list *current = sr->ospf_subsys->network;
@@ -688,6 +691,7 @@ void dijkstra(struct sr_instance* sr, struct router *host)
 	}
 }
 
+/*THREADSAFE*/
 struct router* get_smallest_unknown(struct adj_list *current)
 {
 	struct router* least_unknown = NULL;
@@ -711,23 +715,29 @@ struct router* get_smallest_unknown(struct adj_list *current)
 	return least_unknown;
 }
 
+/*NOT THREADSAFE*/
 uint16_t get_sequence(uint32_t router_id, struct sr_instance *sr)
 {
+    pwospf_lock(sr->ospf_subsys);
     struct adj_list* net_walker=sr->ospf_subsys->network;
     while(net_walker)
     {
         if(net_walker->rt->rid==router_id)
         {
+            pwospf_unlock(sr->ospf_subsys);
             return net_walker->rt->last_seq;
         }
         else
             net_walker=net_walker->next;
     }
+    pwospf_unlock(sr->ospf_subsys);
     return 0;
 }
+/*NOT THREADSAFE*/
 void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
 {
-    struct adj_list* net_walker=sr->ospf_subsys->network;
+   pwospf_lock(sr->ospf_subsys);
+   struct adj_list* net_walker=sr->ospf_subsys->network;
     while(net_walker)
     {
         if(net_walker->rt->rid==router_id)
@@ -737,9 +747,10 @@ void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
         else
             net_walker=net_walker->next;
     }
+    pwospf_unlock(sr->ospf_subsys);
 }
 
-
+/*THREADSAFE*/
 void print_subs(struct route** ads, int num_ads)
 {
     fprintf(stderr, "----Routes----\n");

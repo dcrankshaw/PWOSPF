@@ -25,43 +25,56 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
         return 0;
     }
     
-    
     ps->packet=ps->packet + sizeof(struct ospfv2_hdr); 
     struct ospfv2_lsu_hdr* lsu_head = (struct ospfv2_lsu_hdr*)(ps->packet);
     
-    uint16_t old_seq= get_sequence(pwospf->rid, ps->sr);
+    uint16_t old_seq= get_sequence(pwospf->rid, ps->sr); /*Locked & Unlocked in Function */
     if(old_seq==lsu_head->seq)
     {
-        /* Drop */
+        fprintf(stderr, "DROPPED -- Seq Number same as last Seq Number received from this router.\n");
         return 0;
     }
     uint32_t source_rid=pwospf->rid;
-    struct route* advertisements=(struct route*)malloc(lsu_head->num_adv); //Can't rem if this is how to do this
+    struct route** advertisements=(struct route*)malloc(lsu_head->num_adv*sizeof(struct route*)); 
     
     ps->packet=(ps->packet)+sizeof(struct ospfv2_lsu_hdr);
-    for(int i=0; i<lsu_head->num_adv; i++)
+    struct route* temp_rt;
+    struct ospfv2_lsu_adv* temp_adv;
+    int i;
+    for(i=0; i<lsu_head->num_adv; i++)
     {
         
-        struct ospfv2_lsu_adv* temp_adv=(struct ospfv2_lsu_adv*)(ps->packet);
-        struct route temp_rt;
-        temp_rt.prefix.s_addr=temp_adv->subnet;
-        temp_rt.mask.s_addr=temp_adv->mask;
-        temp_rt.r_id=temp_adv->rid;
+        temp_adv=(struct ospfv2_lsu_adv*)(ps->packet);
+        temp_rt = (struct route*) malloc(sizeof(struct route));
+        temp_rt->prefix.s_addr=temp_adv->subnet;
+        fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(temp_rt->prefix));
+        temp_rt->mask.s_addr=temp_adv->mask;
+        fprintf(stderr, "Mask for new Route: %s\n", inet_ntoa(temp_rt->mask));
+        temp_rt->r_id=temp_adv->rid;
+        struct in_addr new_rid;
+        new_rid.s_addr=temp_rt->r_id;
+        fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(new_rid));
         
         advertisements[i]=temp_rt;
         ps->packet+=sizeof(struct ospfv2_lsu_adv);
     }
     
     /* Adds advertisements to topology if necessary and recomputes FT if necessary.*/
-    if(add_to_top(ps->sr, source_rid, &advertisements, lsu_head->num_adv)==1)
+    if(add_to_top(ps->sr, source_rid, advertisements, lsu_head->num_adv)==1)
     {
-        /*Need to send an LSU now*/
+        /*TODO TODO TODO: Need to send an LSU now!!!*/
     }
-  
-    set_sequence(pwospf->rid, lsu_head->seq, ps->sr);
+    
+    /*free advertisements*/
+    for(i = 0; i<lsu_head->num_adv; i++)
+    {
+        free(advertisements[i]);
+    }
+    free(advertisements);
+    
+    set_sequence(pwospf->rid, lsu_head->seq, ps->sr);   /*Locked & Unlocked in Function */
     
     /*Need packet to point to beginning of ospf header*/
-    int i;
     for(i=0; i< lsu_head->num_adv; i++)
     {
         ps->packet-=sizeof(struct ospfv2_lsu_adv);
@@ -174,8 +187,6 @@ void send_lsu(struct sr_instance* sr)
     pwospf_hdr->type=OSPF_TYPE_LSU;
     /*For length do I include ip and ethernet hdrs too???? */
     pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv));
-    fprintf(stderr, "Number of subnets: %u\n", my_router->subnet_size);
-    fprintf(stderr, "PWOSPF header length: %u\n", pwospf_hdr->len);
     pwospf_hdr->rid=sr->ospf_subsys->this_router->rid;
     pwospf_hdr->aid= htonl(sr->ospf_subsys->area_id);
     pwospf_hdr->autype=OSPF_DEFAULT_AUTHKEY;
@@ -203,12 +214,10 @@ void send_lsu(struct sr_instance* sr)
     struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
     while(iface_walker)
     {
-        fprintf(stderr, "Inside first while.\n");
         ip_hdr->ip_src=iface_walker->address;
         struct neighbor_list* neigh_walker=iface_walker->neighbors;
         while (neigh_walker)
         {
-            fprintf(stderr, "Inside second while.\n");
             /*Finish constructing IP Header */
             ip_hdr->ip_dst=neigh_walker->ip_address;
             ip_hdr->ip_sum=0;
@@ -226,10 +235,8 @@ void send_lsu(struct sr_instance* sr)
             struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
             memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
             
-            fprintf(stderr, "Find dest Mac Address\n");
             /*Find MAC Address of dest*/
-           uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);
-            fprintf(stderr, "LSU packet length: %u\n", pack_len);
+           uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);\
             if(mac!=NULL)
             {
                 memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
@@ -241,7 +248,6 @@ void send_lsu(struct sr_instance* sr)
             }
             else
             {
-                fprintf(stderr, "About to get mac\n");
                 get_mac_address(sr, ip_hdr->ip_dst, pack, pack_len, iface_walker->name, 1, NULL);
                 /**** NEED TO FREE ****/
             }
@@ -260,16 +266,12 @@ void send_lsu(struct sr_instance* sr)
 
 struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr)
 {
-    fprintf(stderr, "Generate Advs\n");
     if(sr->ospf_subsys->this_router==NULL)
         return NULL;
-    
-    fprintf(stderr, "Num of subnets: %d\n", sr->ospf_subsys->this_router->subnet_size);
     
     int i;
     for(i=0; i<sr->ospf_subsys->this_router->subnet_size; i++)
     {
-        fprintf(stderr, "Generating an adv\n");
         struct route* temp_rt=sr->ospf_subsys->this_router->subnets[i];
         struct ospfv2_lsu_adv new_adv;
         new_adv.subnet=temp_rt->prefix.s_addr;
