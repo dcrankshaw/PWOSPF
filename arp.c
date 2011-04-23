@@ -65,8 +65,8 @@ uint8_t* handle_ARP(struct packet_state * ps, struct sr_ethernet_hdr* eth)
 	  			break;
 			default:
 			{
-	  			printf("ARP: Not Request nor Reply\n");
-	  			printf("%hu", arp->ar_op);
+	  			fprintf(stderr, "ARP: Not Request nor Reply\n");
+	  			fprintf(stderr, "%hu", arp->ar_op);
 	  		}
 	  			return NULL;
 		}
@@ -317,60 +317,36 @@ void construct_reply(struct packet_state* ps, const struct sr_arphdr* arp_hdr,
 *******************************************************************/
 uint8_t* construct_request(struct sr_instance* sr, const char* interface,const uint32_t ip_addr)
 {
-	/*Construct ARP Header*/
-	struct sr_arphdr* request;
-	request=(struct sr_arphdr*)malloc(sizeof(struct sr_arphdr));
-	request->ar_hrd=htons(ARP_HRD_ETH);
-	request->ar_pro=htons(ARP_PRO_IP);
-	request->ar_hln=ETHER_ADDR_LEN;
-	request->ar_pln=ARP_IP_LEN;
-	request->ar_op=ARP_REQUEST;
-	
-	/* Find source interface */
-	struct sr_if* iface=sr_get_interface(sr, interface); /*Find iface associated with rt entry */
-	assert(iface); 
-	memmove(request->ar_sha, iface->addr, ETHER_ADDR_LEN);
-	request->ar_sip=iface->ip;  /*Set ARP source IP address to interface's IP address */
-	
-	/* Set ARP dest MAC address to 00:00:00:00:00:00 */
-	int i=0;
+    uint8_t* request=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+sizeof(struct sr_arphdr));
+    //uint16_t pack_len= sizeof(struct sr_ethernet_hdr)+sizeof(struct sr_arphdr);
+    
+    struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)(request);
+    /*Set Ethernet dest MAC address to ff:ff:ff:ff:ff:ff (Broadcast) */
+	int i;
 	for(i=0; i<ETHER_ADDR_LEN; i++)
 	{
-		request->ar_tha[i]=0x00;
+		eth_hdr->ether_dhost[i]=0xff;
 	}
+	eth_hdr->ether_type=htons(ETHERTYPE_ARP);
+	struct sr_if* iface=sr_get_interface(sr, interface);
+	memmove(eth_hdr, iface->mac, ETHER_ADDR_LEN);
 	
-	request->ar_tip=ip_addr;
-	
-	
-	
-	/*ARP Constructed, Now Construct Ethernet Header */
-	struct sr_ethernet_hdr* new_eth;
-	new_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
-	memmove(new_eth->ether_shost, iface->addr,ETHER_ADDR_LEN); /*Ethernet Source Address is Interface's Address */
-	
-	/*Set Ethernet dest MAC address to ff:ff:ff:ff:ff:ff (Broadcast) */
+	struct sr_arphdr* arp_hdr=(struct sr_arphdr*)(request+sizeof(struct sr_ethernet_hdr));
+	arp_hdr->ar_hrd=htons(ARP_HRD_ETH);
+	arp_hdr->ar_pro=htons(ARP_PRO_IP);
+	arp_hdr->ar_hln=ETHER_ADDR_LEN;
+	arp_hdr->ar_pln=ARP_IP_LEN;
+	arp_hdr->ar_op=htons(ARP_REQUEST);
+	memmove(arp_hdr->ar_sha, iface->mac, ETHER_ADDR_LEN);
+	arp_hdr->ar_sip=iface->ip;
 	for(i=0; i<ETHER_ADDR_LEN; i++)
 	{
-		new_eth->ether_dhost[i]=0xff;
+		arp_hdr->ar_tha[i]=0x00;
 	}
+	arp_hdr->ar_tip=ip_addr;
 	
-	new_eth->ether_type=htons(ETHERTYPE_ARP);
+	return request;
 	
-	int eth_offset=sizeof(struct sr_ethernet_hdr);
-	
-	/* Put new Ethernet and ARP Header in Response */
-	uint8_t* arp_req=(uint8_t*) malloc(sizeof(uint8_t));
-	memmove(arp_req, new_eth, eth_offset);
-	memmove((arp_req + eth_offset), request, sizeof(struct sr_arphdr));
-	
-	/*Free Construct ARP and Ethernet Headers */
-	if(request)
-		free(request);
-	if(new_eth)	
-		free(new_eth);
-		
-    fprintf(stderr, "Constructed arp.\n");
-	return arp_req;
 }
 
 

@@ -140,6 +140,7 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 	/*This method needs to return an arp packet*/
 	entry->request_len = sizeof(struct sr_ethernet_hdr) + (sizeof(struct sr_arphdr));
 	entry->arp_request = construct_request(sr, iface, next_hop.s_addr);
+	
 	entry->pac_buf = NULL;
 	entry->lsu_buf = NULL;
 	memmove(entry->iface_name, iface, sr_IFACE_NAMELEN);

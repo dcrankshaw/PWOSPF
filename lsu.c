@@ -119,8 +119,11 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                 }
                 else
                 {
-                    /*Need to buffer and then send ARP*/
+                    fprintf(stderr, "About to get mac\n");
+                    get_mac_address(sr, ip_hdr->ip_dst, packet, ps->len, iface_walker->name, 1, NULL);
+                    /**** NEED TO FREE ****/
                 }
+                free(eth_hdr);
                 
             }
         
@@ -134,8 +137,8 @@ void send_lsu(struct sr_instance* sr)
     struct router* my_router=sr->ospf_subsys->this_router;
     
     uint8_t* pack=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+
-            sizeof(struct ip)+sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr)
-            + ((my_router->subnet_size)*(sizeof(struct ospfv2_lsu_hdr))));
+                    sizeof(struct ip)+sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr)
+                    + ((my_router->subnet_size)*(sizeof(struct ospfv2_lsu_hdr))));
     pack=pack+sizeof(struct sr_ethernet_hdr)+sizeof(struct ip)+
             sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr);
     
@@ -228,6 +231,8 @@ void send_lsu(struct sr_instance* sr)
                 memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
                 memmove(pack, eth_hdr, sizeof(struct sr_ethernet_hdr));
                 sr_send_packet(sr, pack, pack_len , iface_walker->name);
+                if(pack) /** MIGHT NOT WORK****/
+                    free(pack);
                 /*Packet has been sent*/
             }
             else
@@ -237,9 +242,16 @@ void send_lsu(struct sr_instance* sr)
                 /**** NEED TO FREE ****/
             }
             neigh_walker=neigh_walker->next;
+            free(eth_hdr);
         }
         iface_walker=iface_walker->next;
     } 
+    
+    free(advertisements);
+    free(lsu_hdr);
+    free(pwospf_hdr);
+    free(ip_hdr);
+    
 }
 
 struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr)

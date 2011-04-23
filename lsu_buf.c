@@ -30,10 +30,10 @@
     {
         fprintf(stderr, "Buff is empty\n");
         buff=(struct lsu_buf_ent*)malloc(sizeof(struct lsu_buf_ent));
-        buff->next=0;
         buff->lsu_packet=(uint8_t*)malloc(pack_len);
         memmove(buff->lsu_packet,pack, pack_len);
         buff->pack_len=pack_len;
+        buff->next=0;
         return buff;
     }
     else
