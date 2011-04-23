@@ -413,7 +413,7 @@ int handle_ip(struct packet_state *ps)
 					iph->ip_sum = htons(iph->ip_sum);
 					return 1;
 				}
-				else if(ip_hdr->ip_dst.s_addr== OSPF_AllSPFRouters)
+				else if(ip_hdr->ip_dst.s_addr== ntohl(OSPF_AllSPFRouters))
 				{
                     fprintf(stderr, "OSPF packet.\n");
                     handle_pwospf(ps, ip_hdr);

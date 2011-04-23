@@ -329,7 +329,7 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 	}
 	eth_hdr->ether_type=htons(ETHERTYPE_ARP);
 	struct sr_if* iface=sr_get_interface(sr, interface);
-	memmove(eth_hdr, iface->mac, ETHER_ADDR_LEN);
+	memmove(eth_hdr, iface->addr, ETHER_ADDR_LEN);
 	
 	struct sr_arphdr* arp_hdr=(struct sr_arphdr*)(request+sizeof(struct sr_ethernet_hdr));
 	arp_hdr->ar_hrd=htons(ARP_HRD_ETH);
@@ -337,13 +337,30 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 	arp_hdr->ar_hln=ETHER_ADDR_LEN;
 	arp_hdr->ar_pln=ARP_IP_LEN;
 	arp_hdr->ar_op=htons(ARP_REQUEST);
-	memmove(arp_hdr->ar_sha, iface->mac, ETHER_ADDR_LEN);
+	memmove(arp_hdr->ar_sha, iface->addr, ETHER_ADDR_LEN);
 	arp_hdr->ar_sip=iface->ip;
 	for(i=0; i<ETHER_ADDR_LEN; i++)
 	{
 		arp_hdr->ar_tha[i]=0x00;
 	}
 	arp_hdr->ar_tip=ip_addr;
+	/*int happyfuntime = sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_arphdr);
+	for(i = 0; i < happyfuntime; i++)
+	{
+		
+		if(i > 0 && ((i % 2) == 0))
+		{
+			fprintf(stderr, " ");
+		}
+		fprintf(stderr, "%x", request[i]);
+		if(i > 0 && ((i % 8) == 0))
+		{
+			fprintf(stderr, "\n");
+		}
+	}*/
+	
+	fprintf(stderr, "\n\n");
+	
 	
 	return request;
 	
