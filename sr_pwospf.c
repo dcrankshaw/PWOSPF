@@ -161,7 +161,7 @@ void* pwospf_run_thread(void* arg)
     {
         /* -- PWOSPF subsystem functionality should start  here! -- */
 
-        int i;
+        //int i;
         /*
         for(i = 0; i < OSPF_DEFAULT_LSUINT; i += OSPF_DEFAULT_HELLOINT)
         {
@@ -212,7 +212,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     /*Verify Checksum*/
     /*
     uint16_t csum_cal;
-    fprintf(stderr, "Length of ospfv2_hdr: %d\n", sizeof(struct ospfv2_hdr));
+    fprintf(stderr, "Length of ospfv2_hdr: %lu\n", sizeof(struct ospfv2_hdr));
     csum_cal=cksum((uint8_t*) pwospf_hdr, (sizeof(struct ospfv2_hdr)-8));
     csum_cal=htons(csum_cal);
     if(csum_cal!=pwospf_hdr->csum)
@@ -222,7 +222,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
         return 0;
     }*/
     
-    if(pwospf_hdr->aid!=ps->sr->ospf_subsys->area_id)
+    if(pwospf_hdr->aid!=ntohl(ps->sr->ospf_subsys->area_id))
     {
         fprintf(stderr, "Wrong Area ID.\n");
         return 0;
@@ -234,7 +234,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
         return 0;
     }
     
-    /* Now need to switch to the different hello and pwospf */
+    /* Now need to switch to the different hello and lsu pwospf */
     if(pwospf_hdr->type==OSPF_TYPE_HELLO)
     {
         handle_HELLO(ps, ip_hdr);

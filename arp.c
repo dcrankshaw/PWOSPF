@@ -344,6 +344,23 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 		arp_hdr->ar_tha[i]=0x00;
 	}
 	arp_hdr->ar_tip=ip_addr;
+	/*int happyfuntime = sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_arphdr);
+	for(i = 0; i < happyfuntime; i++)
+	{
+		
+		if(i > 0 && ((i % 2) == 0))
+		{
+			fprintf(stderr, " ");
+		}
+		fprintf(stderr, "%x", request[i]);
+		if(i > 0 && ((i % 8) == 0))
+		{
+			fprintf(stderr, "\n");
+		}
+	}*/
+	
+	fprintf(stderr, "\n\n");
+	
 	
 	return request;
 	

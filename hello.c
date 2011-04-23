@@ -59,7 +59,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		{
 			if(strcmp(iface->name, ps->interface) == 0) /* if the current interface equals the incoming interface */
 			{
-				if((iface->mask.s_addr != hello_hdr->nmask) || (iface->helloint != hello_hdr->helloint))
+				if((iface->mask.s_addr != ntohl(hello_hdr->nmask)) || (iface->helloint != ntohs(hello_hdr->helloint)))
 				{
 					/* drop packet */
 					fprintf(stderr,"HELLO doesn't match any interface - packet dropped");
@@ -232,23 +232,23 @@ void send_HELLO(struct sr_instance* sr)
 	fprintf(stderr, "IP header length: %u\n", ip_hdr->ip_hl);
 	ip_hdr->ip_v = IP_VERSION;
 	ip_hdr->ip_tos=ROUTINE_SERVICE;
-	ip_hdr->ip_len = packet_size - sizeof(struct sr_ethernet_hdr);
+	ip_hdr->ip_len = htons(packet_size - sizeof(struct sr_ethernet_hdr));
 	ip_hdr->ip_id = 0; 
 	ip_hdr->ip_off = 0; 
 	ip_hdr->ip_ttl = INIT_TTL;
 	ip_hdr->ip_p = OSPFV2_TYPE;
-	ip_hdr->ip_dst.s_addr = OSPF_AllSPFRouters; 
+	ip_hdr->ip_dst.s_addr = htonl(OSPF_AllSPFRouters); 
 
     /* Set up HELLO header. */
-	hello_hdr->helloint = OSPF_DEFAULT_HELLOINT;
+	hello_hdr->helloint = htons(OSPF_DEFAULT_HELLOINT);
 	hello_hdr->padding = 0;
 
 	/* Set up PWOSPF header. */
 	pwospf_hdr->version = OSPF_V2;
 	pwospf_hdr->type = OSPF_TYPE_HELLO;
-	pwospf_hdr->len = sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr);
+	pwospf_hdr->len = htons(sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr));
 	pwospf_hdr->rid = sr->ospf_subsys->this_router->rid;
-	pwospf_hdr->aid = sr->ospf_subsys->area_id;
+	pwospf_hdr->aid = htonl(sr->ospf_subsys->area_id);
 	pwospf_hdr->autype = OSPF_DEFAULT_AUTHKEY;
 	pwospf_hdr->audata = OSPF_DEFAULT_AUTHKEY;
 	
@@ -262,7 +262,7 @@ void send_HELLO(struct sr_instance* sr)
 	while(iface)
 	{
 		
-		hello_hdr->nmask = iface->mask.s_addr;
+		hello_hdr->nmask = htonl(iface->mask.s_addr);
 		pwospf_hdr->csum = 0;
 	    pwospf_hdr->csum = cksum((uint8_t *)pwospf_hdr, sizeof(struct ospfv2_hdr)-8); 
 	    pwospf_hdr->csum = htons(pwospf_hdr->csum);

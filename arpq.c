@@ -8,6 +8,7 @@
 #include "arpq.h"
 #include "lsu_buf.h"
 #include "buffer.h"
+#include "arp.h"
 
 #define LSU 1
 #define ARP_REQ_INTERVAL 5 /*seconds*/
