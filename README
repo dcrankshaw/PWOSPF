@@ -31,13 +31,13 @@ DONE?
 	-all threading
 	-including possibly ARP
 -buffering LSU packets
+-finish ospf_subsystem initialization
 
 
 TODO:
 -make sure that everywhere that I assume 2-IP subnet won't cause problems with the default
 router to the internet
 		-this may be okay because the default route is in the static routing table
--finish ospf_subsystem initialization
 -Locking and unlocking mutexes (esp in top_info.c, lsu.c, hello.c)
 		-includes double-checking that we don't need to lock it anywhere else (like in sr_router,
 		 arp, buffer)
@@ -48,6 +48,7 @@ router to the internet
  having to change it later on based on hello packets
 -efficiency of ARP_cache delete method
 -free all malloced members of structs in buffers
+-need a netmask config file
  
  
 -probably some other stuff too

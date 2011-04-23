@@ -89,11 +89,11 @@
  struct ip
   {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-    unsigned int ip_hl:4;		/* header length */
-    unsigned int ip_v:4;		/* version */
+    unsigned int ip_v:4;		/* header length */
+    unsigned int ip_hl:4;		/* version */
 #elif __BYTE_ORDER == __BIG_ENDIAN
-    unsigned int ip_v:4;		/* version */
-    unsigned int ip_hl:4;		/* header length */
+    unsigned int ip_hl:4;		/* version */
+    unsigned int ip_v:4;		/* header length */
 #else
 #error "Byte ordering not specified " 
 #endif 
