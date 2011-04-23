@@ -205,7 +205,7 @@ void send_lsu(struct sr_instance* sr)
         struct neighbor_list* neigh_walker=iface_walker->neighbors;
         while (neigh_walker)
         {
-            fprintf(stderr, "Inside first while.\n");
+            fprintf(stderr, "Inside second while.\n");
             /*Finish constructing IP Header */
             ip_hdr->ip_dst=neigh_walker->ip_address;
             ip_hdr->ip_sum=0;
