@@ -109,7 +109,7 @@ void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct
 /*checks whether there are any expired entries in the topoology*/
 void check_top_invalid(struct sr_instance *sr)
 {
-	pwospf_lock(sr->ospf_subsys);
+	
 	struct adj_list *current = sr->ospf_subsys->network;
 	time_t now = time(NULL);
 	struct adj_list *prev = NULL;
@@ -142,7 +142,6 @@ void check_top_invalid(struct sr_instance *sr)
 			current = current->next;
 		}
 	}
-	pwospf_unlock(sr->ospf_subsys);
 }
 
 /*THREADSAFE*/

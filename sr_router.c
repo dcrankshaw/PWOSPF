@@ -368,7 +368,7 @@ int handle_ip(struct packet_state *ps)
 
 							else if(ip_hdr->ip_p == OSPFV2_TYPE)
 							{
-							    fprintf(stderr, "OSPF packet.\n");
+							    fprintf(stderr, "OSPF packet1.\n");
 								handle_pwospf(ps, ip_hdr);
 								return 0; /* Tells handle_packet not to try to send packet*/
 
@@ -378,21 +378,22 @@ int handle_ip(struct packet_state *ps)
 					}
 
 					found_case = 1;
-					leave_hdr_room(ps, ip_offset);
+					
 					if(ip_hdr->ip_p == IPPROTO_ICMP)
 					{
-					    
+					    leave_hdr_room(ps, ip_offset);
 						handle_icmp(ps, ip_hdr);
 					}
 					else if(ip_hdr->ip_p == OSPFV2_TYPE)
                     {
-                        fprintf(stderr, "OSPF packet.\n");
+                        fprintf(stderr, "OSPF packet2.\n");
                         handle_pwospf(ps, ip_hdr);
                         return 0; /* Tells handle_packet not to try to send packet*/
 
                     }
 					else
 					{
+						leave_hdr_room(ps, ip_offset);
 						icmp_response(ps, ip_hdr, ICMPT_DESTUN, ICMPC_PORTUN);
 					}
 
@@ -413,7 +414,7 @@ int handle_ip(struct packet_state *ps)
 				}
 				else if(ip_hdr->ip_dst.s_addr== ntohl(OSPF_AllSPFRouters))
 				{
-                    fprintf(stderr, "OSPF packet.\n");
+                    fprintf(stderr, "OSPF packet3.\n");
                     handle_pwospf(ps, ip_hdr);
                     return 0; /* Tells handle_packet not to try to send packet*/
 
@@ -479,7 +480,7 @@ int handle_ip(struct packet_state *ps)
 						}
 						else if(ip_hdr->ip_p == OSPFV2_TYPE)
 						{
-						    fprintf(stderr, "OSPF packet.\n");
+						    fprintf(stderr, "OSPF packet4.\n");
 							handle_pwospf(ps, ip_hdr);
 							return 0; /* Tells handle_packet not to try to send packet
 										This gets handled internally in the function*/

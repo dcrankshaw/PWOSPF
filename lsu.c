@@ -18,15 +18,17 @@
 
 int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip_hdr)
 {
+    fprintf(stderr, "In handle_lsu now\n");
     
-   pwospf_lock(sr->ospf_subsys);
+   pwospf_lock(ps->sr->ospf_subsys);
    if(pwospf->rid==ps->sr->ospf_subsys->this_router->rid)
     {
         /* Drop */
-        pwospf_unlock(sr->ospf_subsys);
+        pwospf_unlock(ps->sr->ospf_subsys);
+        fprintf(stderr, "DROPPED -- Our own LSU\n");
         return 0;
     }
-    pwospf_unlock(sr->ospf_subsys);
+    pwospf_unlock(ps->sr->ospf_subsys);
     
     ps->packet=ps->packet + sizeof(struct ospfv2_hdr); 
     struct ospfv2_lsu_hdr* lsu_head = (struct ospfv2_lsu_hdr*)(ps->packet);
@@ -39,13 +41,15 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
         return 0;
     }
     uint32_t source_rid=pwospf->rid;
-    struct route** advertisements=(struct route*)malloc(lsu_head->num_adv*sizeof(struct route*)); 
+    uint32_t num_ads_rcd =ntohl(lsu_head->num_adv);
+    struct route** advertisements=(struct route**)malloc(num_ads_rcd*sizeof(struct route*)); 
     
     ps->packet=(ps->packet)+sizeof(struct ospfv2_lsu_hdr);
     struct route* temp_rt;
     struct ospfv2_lsu_adv* temp_adv;
     int i;
-    for(i=0; i<lsu_head->num_adv; i++)
+    fprintf(stderr, "NUM ADVS FROM RECEIVED PACKET: %d ************\n", num_ads_rcd);
+    for(i=0; i<num_ads_rcd; i++)
     {
         
         temp_adv=(struct ospfv2_lsu_adv*)(ps->packet);
@@ -57,20 +61,19 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
         temp_rt->r_id=temp_adv->rid;
         struct in_addr new_rid;
         new_rid.s_addr=temp_rt->r_id;
-        //fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(new_rid));
-        
+        //fprintf(stderr, "RID for new Route: %s\n", inet_ntoa(new_rid));        
         advertisements[i]=temp_rt;
         ps->packet+=sizeof(struct ospfv2_lsu_adv);
     }
     
     /* Adds advertisements to topology if necessary and recomputes FT if necessary.*/
-    if(add_to_top(ps->sr, source_rid, advertisements, lsu_head->num_adv)==1)
+    if(add_to_top(ps->sr, source_rid, advertisements, num_ads_rcd)==1)
     {
         /*TODO TODO TODO: Need to send an LSU now!!!*/
     }
     
     /*free advertisements*/
-    for(i = 0; i<lsu_head->num_adv; i++)
+    for(i = 0; i<num_ads_rcd; i++)
     {
         free(advertisements[i]);
     }
@@ -79,7 +82,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     set_sequence(pwospf->rid, lsu_head->seq, ps->sr);   /*Locked & Unlocked in Function */
     
     /*Need packet to point to beginning of ospf header*/
-    for(i=0; i< lsu_head->num_adv; i++)
+    for(i=0; i< num_ads_rcd; i++)
     {
         ps->packet-=sizeof(struct ospfv2_lsu_adv);
     }
@@ -181,7 +184,8 @@ void send_lsu(struct sr_instance* sr)
     
     /*Generate LSU Header */
     struct ospfv2_lsu_hdr* lsu_hdr=(struct ospfv2_lsu_hdr*)malloc(sizeof(struct ospfv2_lsu_hdr));
-    lsu_hdr->seq=htons(sr->ospf_subsys->last_seq_sent);
+    sr->ospf_subsys->last_seq_sent++;
+    lsu_hdr->seq=sr->ospf_subsys->last_seq_sent;
     lsu_hdr->ttl=INIT_TTL;
     lsu_hdr->num_adv=htonl(my_router->subnet_size);
     
@@ -243,7 +247,9 @@ void send_lsu(struct sr_instance* sr)
             memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
             
             /*Find MAC Address of dest*/
-           uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);\
+           uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);
+           struct ospfv2_hdr* test=(struct ospfv2_hdr*)(pack+sizeof(struct sr_ethernet_hdr) + sizeof(struct ip));
+           fprintf(stderr, "OSPF Version of Constructed LSU: %u \n", test->version);
             if(mac!=NULL)
             {
                 memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
