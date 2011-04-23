@@ -55,10 +55,12 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		{
 			fprintf(stderr, "ERROR - INTERFACE LIST NOT INITIALIZED");
 		}
+		int found = 0;
 		while(iface)
 		{
 			if(strcmp(iface->name, ps->interface) == 0) /* if the current interface equals the incoming interface */
 			{
+				
 				if((iface->mask.s_addr != ntohl(hello_hdr->nmask)) || (iface->helloint != ntohs(hello_hdr->helloint)))
 				{
 					/* drop packet */
@@ -79,10 +81,11 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 					iface->neighbors->id = pwospf_hdr->rid;
 					iface->neighbors->ip_address = ip_hdr->ip_src;
 					iface->neighbors->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
+					found = 1;
 				}
 				else /* add to end of iface->neighbors (end of neighbor_list_walker) */
 				{
-				    fprintf(stderr,"Neigbhors isn't empty\n");
+				    fprintf(stderr,"Neighbors isn't empty\n");
 					neighbor_list_walker = iface->neighbors;
 					struct neighbor_list* prev = NULL;
 					while(neighbor_list_walker != NULL)
@@ -95,23 +98,43 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 						if(neighbor_list_walker->ip_address.s_addr == ip_hdr->ip_src.s_addr) /* ?????????? SHOULD THIS BE COMPARING THE rid, NOT THE ip_address? */
 						{
 							neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
-							pwospf_unlock(ps->sr->ospf_subsys);
-							return;
+							found = 1;
+							break;
 						}
 						
 						prev = neighbor_list_walker;
 						neighbor_list_walker = neighbor_list_walker->next;
 					}
 					/* no matching neighbor found - add new neighbor */
-					neighbor_list_walker->next = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
-					assert(neighbor_list_walker->next);
-					neighbor_list_walker = neighbor_list_walker->next;
-					neighbor_list_walker->next = 0;
-					neighbor_list_walker->id = pwospf_hdr->rid;
-					neighbor_list_walker->ip_address = ip_hdr->ip_src;
-					neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
-					fprintf(stderr, "Added to neighbors\n");
+					if(found == 0)
+					{
+                        neighbor_list_walker->next = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
+                        assert(neighbor_list_walker->next);
+                        neighbor_list_walker = neighbor_list_walker->next;
+                        neighbor_list_walker->next = 0;
+                        neighbor_list_walker->id = pwospf_hdr->rid;
+                        neighbor_list_walker->ip_address = ip_hdr->ip_src;
+                        neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
+                        fprintf(stderr, "Added to neighbors\n");
+                        found = 1;
+				    }
 				}
+				/*add to list of subnets*/
+				
+				struct in_addr new_pref;
+				new_pref.s_addr = (ip_hdr->ip_src.s_addr & htonl(hello_hdr->nmask));
+				fprintf(stderr, "Updating router id for prefix: %s\n", inet_ntoa(new_pref));
+				struct route* old_sub = router_contains_subnet(ps->sr->ospf_subsys->this_router, new_pref.s_addr);
+				/*This is a check for that weird FAQ issue about initialzing subnets*/
+				/*Basically, if we initialized the connection at startup, then later received an LSU*/
+				if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask.s_addr == hello_hdr->nmask)
+				{
+						old_sub->r_id = pwospf_hdr->rid;
+				}
+			}
+			if(found)
+			{
+			    break;
 			}
 			iface = iface->next;
 		}

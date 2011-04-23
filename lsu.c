@@ -138,13 +138,14 @@ void send_lsu(struct sr_instance* sr)
     
     uint8_t* pack=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+
                     sizeof(struct ip)+sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr)
-                    + ((my_router->subnet_size)*(sizeof(struct ospfv2_lsu_hdr))));
+                    + ((my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv))));
     pack=pack+sizeof(struct sr_ethernet_hdr)+sizeof(struct ip)+
             sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr);
     
     /*Generate Advertisements List*/
     struct ospfv2_lsu_adv* advertisements=(struct ospfv2_lsu_adv*)malloc((my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv)));
     struct ospfv2_lsu_adv* advs=generate_adv(advertisements, sr);
+    print_ads(advs, my_router->subnet_size);
     struct ospfv2_lsu_adv* adv_walker=advs;
     int j;
     for(j=0; j<my_router->subnet_size; j++)
@@ -173,6 +174,8 @@ void send_lsu(struct sr_instance* sr)
     pwospf_hdr->type=OSPF_TYPE_LSU;
     /*For length do I include ip and ethernet hdrs too???? */
     pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv));
+    fprintf(stderr, "Number of subnets: %u\n", my_router->subnet_size);
+    fprintf(stderr, "PWOSPF header length: %u\n", pwospf_hdr->len);
     pwospf_hdr->rid=sr->ospf_subsys->this_router->rid;
     pwospf_hdr->aid= htonl(sr->ospf_subsys->area_id);
     pwospf_hdr->autype=OSPF_DEFAULT_AUTHKEY;
@@ -195,7 +198,7 @@ void send_lsu(struct sr_instance* sr)
     ip_hdr->ip_ttl= INIT_TTL;
     ip_hdr->ip_p=OSPFV2_TYPE;
     
-    uint16_t pack_len= sizeof(struct sr_ethernet_hdr) + ip_hdr->ip_len;
+    uint16_t pack_len= sizeof(struct sr_ethernet_hdr) + ntohs(ip_hdr->ip_len);
   
     struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
     while(iface_walker)
@@ -226,6 +229,7 @@ void send_lsu(struct sr_instance* sr)
             fprintf(stderr, "Find dest Mac Address\n");
             /*Find MAC Address of dest*/
            uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);
+            fprintf(stderr, "LSU packet length: %u\n", pack_len);
             if(mac!=NULL)
             {
                 memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
@@ -269,10 +273,29 @@ struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_insta
         struct route* temp_rt=sr->ospf_subsys->this_router->subnets[i];
         struct ospfv2_lsu_adv new_adv;
         new_adv.subnet=temp_rt->prefix.s_addr;
-        new_adv.mask=htonl(temp_rt->mask.s_addr);
+        new_adv.mask=temp_rt->mask.s_addr;
         new_adv.rid=htonl(temp_rt->r_id);
         advs[i]=new_adv;
     }
     
     return advs;   
 } 
+
+void print_ads(struct ospfv2_lsu_adv* ads, int num_ads)
+{
+    fprintf(stderr, "----ADVERTISEMENTS----\n");
+    int i=0;
+    for(i=0; i< num_ads; i++)
+    {
+        struct in_addr sub;
+        sub.s_addr=ads[i].subnet;
+        struct in_addr mask;
+        mask.s_addr=ads[i].mask;
+        struct in_addr rid;
+        rid.s_addr=ads[i].rid;
+        fprintf(stderr, "Subnet: %s, ", inet_ntoa(sub)); 
+        fprintf(stderr, "Mask: %s, ",inet_ntoa(mask));
+        fprintf(stderr, "RID: %s \n", inet_ntoa(rid));
+    }
+    fprintf(stderr, "\n");
+}

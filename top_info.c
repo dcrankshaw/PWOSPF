@@ -310,7 +310,6 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 			/*If this does not already exist in the router's subnets*/
 			if(router_contains(routes[i], host) == 0)
 			{
-				
 				add_new_route(sr, routes[i], host);
 			}
 		}
@@ -370,10 +369,11 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 		{
 			if(cur_router->rt->rid == current->r_id)
 			{
+				/*TODO: I need to fix this because it will drop*/
 				struct route* other_sub = router_contains_subnet(cur_router->rt, current->prefix.s_addr);
 				/*This is an invalid connection*/
 				if((other_sub != NULL) && ((other_sub->mask.s_addr != current->mask.s_addr) ||
-						(other_sub->r_id != host->rid)))
+						((other_sub->r_id != host->rid) && other_sub->r_id != 0)))
 				{
 					remove_rt_sn_using_id(sr, cur_router->rt, other_sub->r_id);
 					invalid = 1;
@@ -737,4 +737,23 @@ void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
         else
             net_walker=net_walker->next;
     }
+}
+
+
+void print_subs(struct route** ads, int num_ads)
+{
+    fprintf(stderr, "----Routes----\n");
+    int i=0;
+    for(i=0; i< num_ads; i++)
+    {
+        struct in_addr sub =ads[i]->prefix;
+        struct in_addr mask = ads[i]->mask;
+        struct in_addr rid;
+        rid.s_addr=ads[i]->r_id;
+        fprintf(stderr, "Subnet: %s, ", inet_ntoa(sub)); 
+        fprintf(stderr, "Mask: %s, ",inet_ntoa(mask));
+        fprintf(stderr, "RID: %s ", inet_ntoa(rid));
+        fprintf(stderr, "Next Hop: %s \n", inet_ntoa(ads[i]->next_hop));
+    }
+    fprintf(stderr, "\n");
 }

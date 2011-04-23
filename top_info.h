@@ -36,6 +36,8 @@ struct router* adj_list_contains(struct sr_instance *, uint32_t);
 void print_nbr_list(struct sr_instance *sr);
 void add_neighbor(struct sr_instance*, char *, uint32_t, struct in_addr);
 void print_nbr(struct neighbor_list* nbr);
+void print_subs(struct route** , int );
+struct route* router_contains_subnet(struct router* host, uint32_t prefix);
 
 
 #endif
