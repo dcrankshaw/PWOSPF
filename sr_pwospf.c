@@ -159,35 +159,26 @@ void* pwospf_run_thread(void* arg)
         /*
         for(i = 0; i < OSPF_DEFAULT_LSUINT; i += OSPF_DEFAULT_HELLOINT)
         {
-        	fprintf(stderr, "This is where we send Hello packets\n");
-        	pwospf_lock(sr->ospf_subsys);
+        	//fprintf(stderr, "This is where we send Hello packets\n");
         	send_HELLO(sr);
-        	pwospf_unlock(sr->ospf_subsys);
         	sleep(OSPF_DEFAULT_HELLOINT);
         }*/
         /*Send LSU updates*/
         
         
-        fprintf(stderr, "This is where we send Hello packets\n");
-        pwospf_lock(sr->ospf_subsys);
+       // fprintf(stderr, "This is where we send Hello packets\n");
         send_HELLO(sr);
-        pwospf_unlock(sr->ospf_subsys);
         sleep(OSPF_DEFAULT_HELLOINT);
         
-        fprintf(stderr, "This is where we send LSU updates\n");
-        pwospf_lock(sr->ospf_subsys);
+        //fprintf(stderr, "This is where we send LSU updates\n");
+        
         check_top_invalid(sr); /*Check for expired topo entries*/
+    	/*pwospf_lock(sr->ospf_subsys);
     	print_nbr_list(sr);
+    	pwospf_unlock(sr->ospf_subsys);*/
     	send_lsu(sr);
-        pwospf_unlock(sr->ospf_subsys);
         sleep(OSPF_DEFAULT_HELLOINT); /*****For debugging *****/
         
-        
-       /* pwospf_lock(sr->ospf_subsys);
-        printf(" pwospf subsystem sleeping \n");
-        pwospf_unlock(sr->ospf_subsys);
-        sleep(2);
-        printf(" pwospf subsystem awake \n");*/
     };
 } /* -- run_ospf_thread -- */
 
@@ -215,7 +206,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
         fprintf(stderr, "Wrong Checksum.\n");
         return 0;
     }
-    if(pwospf_hdr->aid!=ntohl(ps->sr->ospf_subsys->area_id))
+    if(pwospf_hdr->aid!=ntohl(ps->sr->ospf_subsys->area_id)) /* Don't need to lock because area id never changes */
     {
         fprintf(stderr, "Wrong Area ID.\n");
         return 0;
@@ -248,7 +239,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
 
 void create_pwospf_ifaces(struct sr_instance *sr)
 {
-
+	/* Called before any new threads are created */
 	struct sr_if *cur_sr_if = sr->if_list;
 	struct pwospf_iflist *cur_pw_if = sr->ospf_subsys->interfaces;
 	if(cur_sr_if != NULL)

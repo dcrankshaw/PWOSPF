@@ -19,11 +19,14 @@
 int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip_hdr)
 {
     
-    if(pwospf->rid==ps->sr->ospf_subsys->this_router->rid)
+   pwospf_lock(sr->ospf_subsys);
+   if(pwospf->rid==ps->sr->ospf_subsys->this_router->rid)
     {
         /* Drop */
+        pwospf_unlock(sr->ospf_subsys);
         return 0;
     }
+    pwospf_unlock(sr->ospf_subsys);
     
     ps->packet=ps->packet + sizeof(struct ospfv2_hdr); 
     struct ospfv2_lsu_hdr* lsu_head = (struct ospfv2_lsu_hdr*)(ps->packet);
@@ -32,6 +35,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     if(old_seq==lsu_head->seq)
     {
         fprintf(stderr, "DROPPED -- Seq Number same as last Seq Number received from this router.\n");
+        
         return 0;
     }
     uint32_t source_rid=pwospf->rid;
@@ -47,13 +51,13 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
         temp_adv=(struct ospfv2_lsu_adv*)(ps->packet);
         temp_rt = (struct route*) malloc(sizeof(struct route));
         temp_rt->prefix.s_addr=temp_adv->subnet;
-        fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(temp_rt->prefix));
+        //fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(temp_rt->prefix));
         temp_rt->mask.s_addr=temp_adv->mask;
-        fprintf(stderr, "Mask for new Route: %s\n", inet_ntoa(temp_rt->mask));
+        //fprintf(stderr, "Mask for new Route: %s\n", inet_ntoa(temp_rt->mask));
         temp_rt->r_id=temp_adv->rid;
         struct in_addr new_rid;
         new_rid.s_addr=temp_rt->r_id;
-        fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(new_rid));
+        //fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(new_rid));
         
         advertisements[i]=temp_rt;
         ps->packet+=sizeof(struct ospfv2_lsu_adv);
@@ -94,6 +98,7 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
     if(ip_hdr->ip_ttl!=0)
     {
         struct in_addr prev_src=ip_hdr->ip_src;
+        pwospf_lock(sr->ospf_subsys);
         struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
         while(iface_walker)
         {
@@ -141,12 +146,14 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
             }
         
         }
+        pwospf_unlock(sr->ospf_subsys);
     }
 }
 
 
 void send_lsu(struct sr_instance* sr)
 {
+	pwospf_lock(sr->ospf_subsys);
     struct router* my_router=sr->ospf_subsys->this_router;
     
     uint8_t* pack=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+
@@ -257,6 +264,8 @@ void send_lsu(struct sr_instance* sr)
         iface_walker=iface_walker->next;
     } 
     
+    pwospf_unlock(sr->ospf_subsys);
+    
     free(advertisements);
     free(lsu_hdr);
     free(pwospf_hdr);
@@ -264,6 +273,7 @@ void send_lsu(struct sr_instance* sr)
     
 }
 
+/***Precondition: pwospf_subsystem already lock*/
 struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr)
 {
     if(sr->ospf_subsys->this_router==NULL)

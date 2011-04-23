@@ -266,6 +266,7 @@ void send_HELLO(struct sr_instance* sr)
 	pwospf_hdr->version = OSPF_V2;
 	pwospf_hdr->type = OSPF_TYPE_HELLO;
 	pwospf_hdr->len = htons(sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr));
+	pwospf_lock(sr->ospf_subsys);
 	pwospf_hdr->rid = sr->ospf_subsys->this_router->rid;
 	pwospf_hdr->aid = htonl(sr->ospf_subsys->area_id);
 	pwospf_hdr->autype = OSPF_DEFAULT_AUTHKEY;
@@ -300,4 +301,5 @@ void send_HELLO(struct sr_instance* sr)
 
 	if(outgoing_packet_buffer)
 		free(outgoing_packet_buffer);
+	pwospf_unlock(sr->ospf_subsys);
 }

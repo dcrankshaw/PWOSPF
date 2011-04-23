@@ -43,6 +43,7 @@ void print_nbr(struct neighbor_list* nbr)
 }
 
 /*NOT THREADSAFE*/
+/* This method is never used ---> Can be deleted */
 void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct in_addr ip)
 {
 	struct pwospf_iflist *current_if = sr->ospf_subsys->interfaces;
@@ -249,7 +250,7 @@ int remove_from_topo(struct sr_instance *sr, struct router *rt)
 
 /* called when LSU packets are received. Adds to the adjacency list */
 
-/*NOT THREADSAFE*/
+/*THREADSAFE*/
 int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_routes,
 				int num_ads)
 {
