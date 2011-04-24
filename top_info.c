@@ -438,8 +438,8 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 		{
 			struct in_addr adj_r_id;
 			adj_r_id.s_addr = current->r_id;
-			struct in_addr host_router_id;
-			host_router_id.s_addr = cur_router->rt->rid;
+			//struct in_addr host_router_id;
+			//host_router_id.s_addr = cur_router->rt->rid;
 			if(cur_router->rt->rid == current->r_id)
 			{
 				added = 1;
@@ -454,7 +454,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 				{
 					
 					/*TODO: decide whether this will break anything!!!!!!!*/
-					other_sub->r_id = ntohl(other_sub->r_id);
+					//other_sub->r_id = ntohl(other_sub->r_id);
 					if(other_sub->mask.s_addr != current->mask.s_addr)
 					{
 						fprintf(stderr, "Non-matching masks - removed a subnet\n");
@@ -594,6 +594,7 @@ struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 	fprintf(stderr,"In Adding a new router.\n");
 	struct router* new_router = (struct router*)malloc(sizeof(struct router));
 	struct adj_list *new_adj_entry = (struct adj_list *)malloc(sizeof(struct adj_list));
+	
 	
 	if(new_router && new_adj_entry)
 	{

@@ -54,6 +54,7 @@ int pwospf_init(struct sr_instance* sr)
 	char *eth0_interface = "eth0";
 	struct sr_if* zero = sr_get_interface(sr, eth0_interface);
 	sr->ospf_subsys->fwrd_table = 0;
+	sr->ospf_subsys->network = 0;
 	sr->ospf_subsys->this_router = add_new_router(sr, zero->ip);
 	if(zero == NULL)
 	{
@@ -109,9 +110,9 @@ int pwospf_init(struct sr_instance* sr)
 	sr->ospf_subsys->last_seq_sent = 0;
 	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
 	sr->ospf_subsys->autype = 0;
-	sr->ospf_subsys->network = (struct adj_list*) malloc(sizeof(struct adj_list));
+	/*sr->ospf_subsys->network = (struct adj_list*) malloc(sizeof(struct adj_list));
 	sr->ospf_subsys->network->rt = sr->ospf_subsys->this_router;
-	sr->ospf_subsys->network->next = 0;
+	sr->ospf_subsys->network->next = 0;*/
 	print_topo(sr);
 
     /* -- start thread subsystem -- */
