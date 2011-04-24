@@ -107,8 +107,8 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 {
 	if(search_cache(ps->sr, ip)==NULL) /*Entry is not already in cache so add. */
 	{
-       lock_cache(ps->sr->arp_sub);
-       struct arp_cache_entry* cache_walker=0;
+        lock_cache(ps->sr->arp_sub);
+        struct arp_cache_entry* cache_walker=0;
         struct arp_cache_entry* prev = 0;
     
         assert(ps);

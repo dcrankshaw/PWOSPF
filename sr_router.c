@@ -583,7 +583,6 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 	struct ftable_entry* response= NULL;
 	
 	/*LOCK MUTEX*/
-	fprintf(stderr, "Locking in get_dyn_routing_if()\n");
 	pwospf_lock(ps->sr->ospf_subsys);
 	
 	struct ftable_entry *current = ps->sr->ospf_subsys->fwrd_table;

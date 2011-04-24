@@ -53,13 +53,14 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
 		args->sr = sr;
 		args->entry = entry;
+		unlock_arp_q(sr->arp_sub);
 		if(pthread_create(&entry->arp_thread, 0, arp_req_init, args))
 		{
         	perror("pthread_create");
         	assert(0);
     	}
 	}
-	unlock_arp_q(sr->arp_sub);
+	
 }
 
 /*Initialize the arp subsystem*/
