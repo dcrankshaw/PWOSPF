@@ -46,7 +46,7 @@ int pwospf_init(struct sr_instance* sr)
     /* -- handle subsystem initialization here! -- */
 	
 	
-	sr->ospf_subsys->network = 0;
+	
 	printf("about to create interfaces...\n");
 	create_pwospf_ifaces(sr);
 	printf("created interfaces\n");
@@ -109,6 +109,10 @@ int pwospf_init(struct sr_instance* sr)
 	sr->ospf_subsys->last_seq_sent = 0;
 	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
 	sr->ospf_subsys->autype = 0;
+	sr->ospf_subsys->network = (struct adj_list*) malloc(sizeof(struct adj_list));
+	sr->ospf_subsys->network->rt = sr->ospf_subsys->this_router;
+	sr->ospf_subsys->network->next = 0;
+	print_topo(sr);
 
     /* -- start thread subsystem -- */
     if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) {
@@ -130,10 +134,10 @@ int pwospf_init(struct sr_instance* sr)
 
 void pwospf_lock(struct pwospf_subsys* subsys)
 {
-    fprintf(stderr, "Pre-pwospf_lock\n");
+    //fprintf(stderr, "Pre-pwospf_lock\n");
     if ( pthread_mutex_lock(&subsys->lock) )
     { assert(0); }
-    fprintf(stderr, "Post-pwospf_lock\n");
+   // fprintf(stderr, "Post-pwospf_lock\n");
     
 } /* -- pwospf_subsys -- */
 
@@ -146,10 +150,10 @@ void pwospf_lock(struct pwospf_subsys* subsys)
 
 void pwospf_unlock(struct pwospf_subsys* subsys)
 {
-   fprintf(stderr, "Pre-pwospf_unlock\n");
+  // fprintf(stderr, "Pre-pwospf_unlock\n");
    if ( pthread_mutex_unlock(&subsys->lock) )
     { assert(0); }
-    fprintf(stderr, "Post-pwospf_unlock\n");
+   // fprintf(stderr, "Post-pwospf_unlock\n");
 } /* -- pwospf_subsys -- */
 
 /*---------------------------------------------------------------------

@@ -40,7 +40,9 @@ void print_nbr_list(struct sr_instance *sr)
 /*THREADSAFE*/
 void print_nbr(struct neighbor_list* nbr)
 {
-	fprintf(stderr, "ID: %u\n", nbr->id);
+    struct in_addr rid;
+    rid.s_addr=nbr->id;
+	fprintf(stderr, "ID: %s\n", inet_ntoa(rid));
 }
 
 /*NOT THREADSAFE*/
@@ -320,6 +322,29 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 	
 	
 	dijkstra(sr, sr->ospf_subsys->this_router);
+	
+	fprintf(stderr, "\n\n--TOPO AFTER DIJKSTRA's--\n");
+	
+	struct adj_list* adj_walker = sr->ospf_subsys->network;
+	while(adj_walker)
+	{
+		struct in_addr this_id;
+	    this_id.s_addr = adj_walker->rt->rid;
+	    fprintf(stderr, "ID: %s\n", inet_ntoa(this_id));
+	    if(adj_walker->rt->prev)
+	    {
+		    this_id.s_addr = adj_walker->rt->prev->rid;
+		    fprintf(stderr, "Prev ID: %s\n", inet_ntoa(this_id));
+		}
+		else
+		{
+		    fprintf(stderr, "Prev ID: NULL\n");
+		}
+		//fprintf(stderr, "\n");
+		adj_walker = adj_walker->next;
+	}
+	fprintf(stderr, "\n");
+	
 	update_ftable(sr);
 	pwospf_unlock(sr->ospf_subsys);
 	return 1;

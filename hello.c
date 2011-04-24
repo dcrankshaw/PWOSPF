@@ -79,6 +79,9 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 					assert(iface->neighbors);
 					iface->neighbors->next = 0;
 					iface->neighbors->id = pwospf_hdr->rid;
+					struct in_addr rid;
+					rid.s_addr=pwospf_hdr->rid;
+					fprintf(stderr, "RID FROM HELLO: %s\n",inet_ntoa(rid));
 					iface->neighbors->ip_address = ip_hdr->ip_src;
 					iface->neighbors->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 					found = 1;
@@ -126,7 +129,14 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				/*Basically, if we initialized the connection at startup, then later received an LSU*/
 				if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask.s_addr == ntohl(hello_hdr->nmask))
 				{
-						old_sub->r_id = ntohl(pwospf_hdr->rid);
+					struct in_addr rid;
+                    rid.s_addr=pwospf_hdr->rid;
+                    fprintf(stderr, "Before: UPDATING SUB--RID: %s\n", inet_ntoa(rid));
+                    //old_sub->r_id = ntohl(pwospf_hdr->rid);
+                    old_sub->r_id = pwospf_hdr->rid;
+                    rid.s_addr=old_sub->r_id;
+                    fprintf(stderr, "After: UPDATING SUB--RID: %s\n", inet_ntoa(rid));
+
 				}
 			}
 			if(found)
