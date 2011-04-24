@@ -37,6 +37,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 	struct ospfv2_hello_hdr* hello_hdr = 0;
 	
 	/*lock pwospf subsys*/
+	fprintf(stderr, "Locking in handle_hello()\n");
 	pwospf_lock(ps->sr->ospf_subsys);
 	struct pwospf_iflist* iface = ps->sr->ospf_subsys->interfaces;
 
@@ -267,6 +268,7 @@ void send_HELLO(struct sr_instance* sr)
 	pwospf_hdr->version = OSPF_V2;
 	pwospf_hdr->type = OSPF_TYPE_HELLO;
 	pwospf_hdr->len = htons(sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr));
+	fprintf(stderr, "Locking in send_hello()\n");
 	pwospf_lock(sr->ospf_subsys);
 	pwospf_hdr->rid = sr->ospf_subsys->this_router->rid;
 	pwospf_hdr->aid = htonl(sr->ospf_subsys->area_id);

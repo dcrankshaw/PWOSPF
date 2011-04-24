@@ -159,7 +159,9 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 *******************************************************************/
 uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
+     fprintf(stderr, "trying to lock in search_cache\n");
     lock_cache(sr->arp_sub);
+     fprintf(stderr, "locked in search_cache\n");
     
     unsigned char* mac=(unsigned char *)malloc(ETHER_ADDR_LEN);
     
@@ -175,7 +177,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 			{
 		
 				memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
-				/***UNLONCK HERE*****/
+				unlock_cache(sr->arp_sub);
 				return mac;
 			}
 			else
@@ -192,6 +194,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	
 	/*IP Address is not in cache. */
 	unlock_cache(sr->arp_sub);
+	 fprintf(stderr, "unlocked in search cache\n");
 	return NULL;
 }
 

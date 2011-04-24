@@ -130,8 +130,11 @@ int pwospf_init(struct sr_instance* sr)
 
 void pwospf_lock(struct pwospf_subsys* subsys)
 {
+    fprintf(stderr, "Pre-pwospf_lock\n");
     if ( pthread_mutex_lock(&subsys->lock) )
     { assert(0); }
+    fprintf(stderr, "Post-pwospf_lock\n");
+    
 } /* -- pwospf_subsys -- */
 
 /*---------------------------------------------------------------------
@@ -143,8 +146,10 @@ void pwospf_lock(struct pwospf_subsys* subsys)
 
 void pwospf_unlock(struct pwospf_subsys* subsys)
 {
-    if ( pthread_mutex_unlock(&subsys->lock) )
+   fprintf(stderr, "Pre-pwospf_unlock\n");
+   if ( pthread_mutex_unlock(&subsys->lock) )
     { assert(0); }
+    fprintf(stderr, "Post-pwospf_unlock\n");
 } /* -- pwospf_subsys -- */
 
 /*---------------------------------------------------------------------

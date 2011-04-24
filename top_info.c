@@ -8,6 +8,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "sr_if.h"
 #include "sr_protocol.h"
@@ -290,8 +291,9 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 				int num_ads)
 {
 	
+	fprintf(stderr, "Locking in add_to_top()\n");
 	pwospf_lock(sr->ospf_subsys);
-	fprintf(stderr, "Locked ospf subsys\n");
+	//fprintf(stderr, "Locked ospf subsys\n");
 	struct router* host = adj_list_contains(sr, host_rid);
 	if(host != NULL)
 	{
@@ -672,6 +674,7 @@ int update_ftable(struct sr_instance *sr)
 					}
 					else
 					{
+						assert(cur_ft_entry);
 						cur_ft_entry->next = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
 						cur_ft_entry = cur_ft_entry->next;
 					}
@@ -683,7 +686,7 @@ int update_ftable(struct sr_instance *sr)
 					memmove(cur_ft_entry->interface, cur_if->name, sr_IFACE_NAMELEN);
 					sr->ospf_subsys->this_router->subnet_size++;
 					i++;
-					cur_if = cur_if->next;	
+					//cur_if = cur_if->next;	
 				}
 			}
 			else
@@ -893,6 +896,7 @@ struct router* get_smallest_unknown(struct adj_list *current)
 /*NOT THREADSAFE*/
 uint16_t get_sequence(uint32_t router_id, struct sr_instance *sr)
 {
+    fprintf(stderr, "Locking in get_sequence()\n");
     pwospf_lock(sr->ospf_subsys);
     struct adj_list* net_walker=sr->ospf_subsys->network;
     while(net_walker)
@@ -911,6 +915,7 @@ uint16_t get_sequence(uint32_t router_id, struct sr_instance *sr)
 /*NOT THREADSAFE*/
 void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
 {
+   fprintf(stderr, "Locking in set_sequence()\n");
    pwospf_lock(sr->ospf_subsys);
    struct adj_list* net_walker=sr->ospf_subsys->network;
     while(net_walker)

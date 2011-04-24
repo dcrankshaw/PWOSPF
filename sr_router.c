@@ -178,14 +178,6 @@ void sr_handlepacket(struct sr_instance* sr,
 	    free(head);
 	if(perm_eth)
 	    free(perm_eth);
-	/*Reset the response packet for updating the packet buffer */    
-	/*current.response = (uint8_t *)malloc(MAX_PAC_LENGTH);
-	current.res_len = 0;
-	update_buffer(&current, current.sr->queue);
-    if(current.response)
-	    free(current.response);*/
-
-    
 }
 
 /*---------------------------------------------------------------------
@@ -203,11 +195,9 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 
 	/*check ARP cache to see if the MAC address for the outgoing IP address is there*/
 	
-	struct ip *new_iphdr = (struct ip*)(newpacket+sizeof(struct sr_ethernet_hdr));
 	struct sr_if *sif = 0;
 	if(ps->forward)
 	{
-		/*assert(ps->rt_entry);*/
 		if(ps->dyn_entry)
 		{
 			sif = sr_get_interface(ps->sr, ps->dyn_entry->interface);
@@ -256,15 +246,6 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 	}
 	else
 	{
-		/*ps->response = newpacket;
-		struct packet_buffer* current = buf_packet(ps,newpacket, new_iphdr->ip_dst,sif, eth_rec);
-				ps->response = newpacket;
-				send_request(ps,new_iphdr->ip_dst.s_addr);
-				current->num_arp_reqs=0;
-				current->arp_req=(uint8_t*)malloc(ps->res_len);
-				assert(current->arp_req);
-				memmove(current->arp_req, ps->response, ps->res_len);
-				current->arp_len = ps->res_len;*/
 		get_mac_address(ps->sr, nhop, newpacket, ps->res_len, sif->name, 0, eth_rec);
 		return 0;
 	}
@@ -316,11 +297,6 @@ int handle_ip(struct packet_state *ps)
 		}
 		int ip_offset = sizeof(struct ip);
 
-		ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
-		if(ps->dyn_entry == NULL)
-		{
-			ps->rt_entry = get_static_routing_if(ps, ip_hdr->ip_dst);
-		}
 		struct ip *iph = (struct ip*)ps->response; /* mark where the ip header should go */
 
 
@@ -431,6 +407,12 @@ int handle_ip(struct packet_state *ps)
 		{
 			/*check if interface==eth0*/
 
+			
+			ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
+			if(ps->dyn_entry == NULL)
+			{
+				ps->rt_entry = get_static_routing_if(ps, ip_hdr->ip_dst);
+			}
 			if(is_external(ps->sr, ps->interface))
 			{
 				char *temp_if;
@@ -601,6 +583,7 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 	struct ftable_entry* response= NULL;
 	
 	/*LOCK MUTEX*/
+	fprintf(stderr, "Locking in get_dyn_routing_if()\n");
 	pwospf_lock(ps->sr->ospf_subsys);
 	
 	struct ftable_entry *current = ps->sr->ospf_subsys->fwrd_table;
