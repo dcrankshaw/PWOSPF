@@ -517,10 +517,6 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 					host->adjacencies[host->adj_size] = cur_router->rt;
 					host->adj_size++;
 					
-					host->subnets[host->subnet_size] = (struct route*)malloc(sizeof(struct route));
-					memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
-					host->subnet_size++;
-					
 					cur_router->rt->subnets[cur_router->rt->subnet_size] = (struct route*)malloc(sizeof(struct route));
 					memmove(cur_router->rt->subnets[cur_router->rt->subnet_size], current, sizeof(struct route));
 					/*change neighbor ID to hosts (it was originally cur_routers)*/
@@ -528,20 +524,10 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 					cur_router->rt->subnet_size++;
 					added = 1;
 				}
-				/*if(!invalid)
-				{
-					struct route* old_sub = router_contains_subnet(cur_router->rt, current->prefix.s_addr);
-					if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask.s_addr == current->mask.s_addr)
-					{
-						old_sub->r_id = current->r_id;
-					}
-					else
-					{
-						host->subnets[host->subnet_size] = (struct route*)malloc(sizeof(struct route));
-						memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
-						host->subnet_size++;
-					}
-				}*/
+				
+				host->subnets[host->subnet_size] = (struct route*)malloc(sizeof(struct route));
+				memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
+				host->subnet_size++;
 				break;
 				
 			}
