@@ -172,6 +172,8 @@ void delete_all_pack(struct packet_buffer* buff)
     {
         prev=buff;
         buff=buff->next;
+        free(prev->packet);
+        free(prev->old_eth);
         free(prev);
     }
     free(buff);
@@ -255,6 +257,8 @@ void delete_all_pack(struct packet_buffer* buff)
         send_icmp(sr, buff->packet, buff->pack_len, buff->old_eth);
         prev=buff;
         buff=buff->next;
+        free(prev->packet);
+        free(prev->old_eth);
         free(prev);
     }
     free(buff);

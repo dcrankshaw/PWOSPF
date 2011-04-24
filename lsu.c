@@ -99,6 +99,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
 
 void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet, struct ospfv2_hdr* pwospf_hdr, struct ip* ip_hdr)
 {
+    fprintf(stdeer, "IN FORWARD LSU!!\n");
     ip_hdr->ip_ttl--;
     if(ip_hdr->ip_ttl!=0)
     {
@@ -177,7 +178,6 @@ void send_lsu(struct sr_instance* sr)
         num_entries_rt++;
         rt_table_walker=rt_table_walker->next;
     }
-    fprintf(stderr, "NUM ENTRIES in static routing table: %d\n", num_entries_rt);
     struct ospfv2_lsu_adv* advertisements=(struct ospfv2_lsu_adv*)malloc
                     ((my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv)));
     struct ospfv2_lsu_adv* advs=generate_adv(advertisements, sr, num_entries_rt);
@@ -196,17 +196,15 @@ void send_lsu(struct sr_instance* sr)
     pack-=(sizeof(struct ospfv2_lsu_hdr));
     
     /*Generate LSU Header */
-    struct ospfv2_lsu_hdr* lsu_hdr=(struct ospfv2_lsu_hdr*)malloc(sizeof(struct ospfv2_lsu_hdr));
+    struct ospfv2_lsu_hdr* lsu_hdr=(struct ospfv2_lsu_hdr*)pack;
     sr->ospf_subsys->last_seq_sent++;
     lsu_hdr->seq=sr->ospf_subsys->last_seq_sent;
     lsu_hdr->ttl=INIT_TTL;
     lsu_hdr->num_adv=htonl(my_router->subnet_size + num_entries_rt);
-     fprintf(stderr, "a\n");
-    memmove(pack,lsu_hdr, sizeof(struct ospfv2_lsu_hdr));
     pack-=(sizeof(struct ospfv2_hdr));
     
     /*Generate PWOSPF Header*/
-    struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*) malloc(sizeof(struct ospfv2_hdr));
+    struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*) pack;
     pwospf_hdr->version=OSPF_V2;
     pwospf_hdr->type=OSPF_TYPE_LSU;
     pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv));
@@ -217,12 +215,10 @@ void send_lsu(struct sr_instance* sr)
     pwospf_hdr->csum=0;
     pwospf_hdr->csum=cksum((uint8_t*)(pwospf_hdr), sizeof(struct ospfv2_hdr));
     pwospf_hdr->csum=htons(pwospf_hdr->csum);
-    fprintf(stderr, "a\n");
-    memmove(pack, pwospf_hdr, sizeof(struct ospfv2_hdr));
     pack-=(sizeof(struct ip));
     
     /*Generate IP Header */
-    struct ip* ip_hdr=(struct ip*)malloc(sizeof(struct ip));
+    struct ip* ip_hdr=(struct ip*)pack;
     ip_hdr->ip_hl=(sizeof(struct ip))/4;
     ip_hdr->ip_v=IP_VERSION;
     ip_hdr->ip_tos=ROUTINE_SERVICE;
@@ -233,54 +229,42 @@ void send_lsu(struct sr_instance* sr)
     ip_hdr->ip_p=OSPFV2_TYPE;
     
     uint16_t pack_len= sizeof(struct sr_ethernet_hdr) + ntohs(ip_hdr->ip_len);
-   fprintf(stderr, "b\n");
+    
     struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
     while(iface_walker)
     {
-         fprintf(stderr, "c\n");
         ip_hdr->ip_src=iface_walker->address;
         struct neighbor_list* neigh_walker=iface_walker->neighbors;
         while (neigh_walker)
         {
-             fprintf(stderr, "d\n");
             /*Finish constructing IP Header */
             ip_hdr->ip_dst=neigh_walker->ip_address;
             ip_hdr->ip_sum=0;
             ip_hdr->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
             ip_hdr->ip_sum=htons(ip_hdr->ip_sum);
-             fprintf(stderr, "e\n");
-            memmove(pack, ip_hdr, sizeof(struct ip));
+
             pack-=sizeof(struct sr_ethernet_hdr);
             
             /*Generate Ethernet Header*/
-            struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
+            struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)pack;
             eth_hdr->ether_type=htons(ETHERTYPE_IP);
             
             /*Find Interface to be sent out of's MAC Address*/
             struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
             memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
-             fprintf(stderr, "f\n");
+
             /*Find MAC Address of dest*/
-           uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);
-            fprintf(stderr, "g\n");
-           struct ospfv2_hdr* test=(struct ospfv2_hdr*)(pack+sizeof(struct sr_ethernet_hdr) + sizeof(struct ip));
-           fprintf(stderr, "OSPF Version of Constructed LSU: %u \n", test->version);
+            uint8_t* mac=search_cache(sr, ip_hdr->ip_dst.s_addr);
             if(mac!=NULL)
             {
                 memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
-                memmove(pack, eth_hdr, sizeof(struct sr_ethernet_hdr));
                 sr_send_packet(sr, pack, pack_len , iface_walker->name);
-                if(pack) /** MIGHT NOT WORK****/
-                    free(pack);
-                /*Packet has been sent*/
             }
             else
             {
                 get_mac_address(sr, ip_hdr->ip_dst, pack, pack_len, iface_walker->name, 1, NULL);
-                /**** NEED TO FREE ****/
             }
             neigh_walker=neigh_walker->next;
-            free(eth_hdr);
         }
         iface_walker=iface_walker->next;
     } 
@@ -288,9 +272,8 @@ void send_lsu(struct sr_instance* sr)
     pwospf_unlock(sr->ospf_subsys);
     
     free(advertisements);
-    free(lsu_hdr);
-    free(pwospf_hdr);
-    free(ip_hdr);
+    
+    /** Won't let me free pack?!?!?!!?!*/
     
 }
 
