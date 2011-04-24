@@ -45,7 +45,6 @@ router to the internet
 -Finish resolving issues between what Adam's add and delete neighbor methods do and what
  mine do. This includes the issues about initializing the interface subnets to RID = 0, then
  having to change it later on based on hello packets
--efficiency of ARP_cache delete method
 -free all malloced members of structs in buffers
 -need a netmask config file
 

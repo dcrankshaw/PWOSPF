@@ -153,11 +153,12 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 *******************************************************************/
 uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
-    /******NEED TO LOCK*****/
+    lock_cache(sr->arp_sub);
     
     unsigned char* mac=(unsigned char *)malloc(ETHER_ADDR_LEN);
     
 	struct arp_cache_entry* cache_walker=0;
+	struct arp_cache_entry* prev=0;
 	cache_walker=sr->arp_cache;
 	while(cache_walker) 
 	{
@@ -172,7 +173,10 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 				return mac;
 			}
 			else
-				cache_walker = cache_walker->next;
+			{
+			    prev=cache_walker;
+			    cache_walker = cache_walker->next;
+			}
 		}
 		else                                        /*If the ARP entry has expired, delete. */
 		{
@@ -181,52 +185,37 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	}
 	
 	/*IP Address is not in cache. */
-	/****UNLOCK HERE******/
+	unlock_cache(sr->arp_sub);
 	return NULL;
 }
 
 /*******************************************************************
 *   Deletes entry from cache.
 *******************************************************************/
-struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_entry* want_deleted)
+struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_entry* walker, struct arp_cache_entry* prev)
 {
-	struct arp_cache_entry* prev=0;
-	struct arp_cache_entry* walker=0;
-	walker=sr->arp_cache;
-	
-	while(walker)
-	{
-		if(walker==want_deleted)    /* On item to be deleted in cache. */
-		{
-			if(prev==0)             /* Item is first in cache. */  
-			{
-				if(sr->arp_cache->next)
-				{
-					sr->arp_cache=sr->arp_cache->next;
-				}	
-				else
-				{
-					sr->arp_cache = NULL;
-				}
-				break;
-			}
-			else if(!walker->next) /* Item is last in cache. */
-			{
-                prev->next=NULL;
-                break;
-			}
-			else                    /* Item is in the middle of cache. */
-			{
-				prev->next=walker->next;
-				break;
-			}
-		}
-		else
-		{
-			prev=walker;
-			walker=walker->next;
-		}
-	}
+    if(prev==0)         /* Item is first in cache. */  
+    {
+        if(sr->arp_cache->next)
+        {
+            sr->arp_cache=sr->arp_cache->next;
+        }	
+        else
+        {
+            sr->arp_cache = NULL;
+        }
+        break;
+    }
+    else if(!walker->next) /* Item is last in cache. */
+    {
+        prev->next=NULL;
+        break;
+    }
+    else                    /* Item is in the middle of cache. */
+    {
+        prev->next=walker->next;
+        break;
+    }
 	
 	/* Walker is still on item to be deleted so free that item. */
 	if(walker)
