@@ -12,6 +12,7 @@
 #include "sr_protocol.h"
 #include "arp.h"
 #include "sr_pwospf.h"
+#include "arpq.h"
 
 
 #ifndef ARP_IP_LEN
@@ -106,7 +107,9 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 {
 	if(search_cache(ps->sr, ip)==NULL) /*Entry is not already in cache so add. */
 	{
-        struct arp_cache_entry* cache_walker=0;
+       lock_cache(ps->sr->arp_sub);
+       struct arp_cache_entry* cache_walker=0;
+        struct arp_cache_entry* prev = 0;
     
         assert(ps);
         assert(mac);
@@ -124,14 +127,16 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
         else
         {
             cache_walker = ps->sr->arp_cache;
+            
             while(cache_walker->next)
             {
                 if(cache_walker->timenotvalid < time(NULL))
                 {
-                    cache_walker = delete_entry(ps->sr,cache_walker);
+                    cache_walker = delete_entry(ps->sr,cache_walker, prev);
                 }
                 else
                 {
+               		prev = cache_walker;
                		cache_walker=cache_walker->next;
                	}	
             }
@@ -143,6 +148,7 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
             cache_walker->timenotvalid=time(NULL) +ARP_TIMEOUT;
             cache_walker->next=0;
         }
+        unlock_cache(ps->sr->arp_sub);
 	}
 
 }
@@ -180,7 +186,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 		}
 		else                                        /*If the ARP entry has expired, delete. */
 		{
-			cache_walker = delete_entry(sr, cache_walker);
+			cache_walker = delete_entry(sr, cache_walker, prev);
 		}
 	}
 	
@@ -204,17 +210,14 @@ struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_en
         {
             sr->arp_cache = NULL;
         }
-        break;
     }
     else if(!walker->next) /* Item is last in cache. */
     {
         prev->next=NULL;
-        break;
     }
     else                    /* Item is in the middle of cache. */
     {
         prev->next=walker->next;
-        break;
     }
 	
 	/* Walker is still on item to be deleted so free that item. */

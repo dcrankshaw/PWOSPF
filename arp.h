@@ -30,7 +30,7 @@ uint8_t* handle_ARP(struct packet_state*, struct sr_ethernet_hdr*);
 void got_Request(struct packet_state*, struct sr_arphdr*, const struct sr_ethernet_hdr*);
 uint8_t* got_Reply(struct packet_state *, struct sr_arphdr *);
 void add_cache_entry(struct packet_state*,const uint32_t, const unsigned char*);
-struct arp_cache_entry* delete_entry(struct sr_instance*,struct arp_cache_entry* );
+struct arp_cache_entry* delete_entry(struct sr_instance*,struct arp_cache_entry*, struct arp_cache_entry*);
 uint8_t* search_cache(struct sr_instance* ,const uint32_t );
 void print_cache_entry(struct arp_cache_entry*);
 void print_cache(struct sr_instance*);
