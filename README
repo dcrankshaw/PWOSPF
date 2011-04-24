@@ -6,9 +6,6 @@ Group 1
       Maddie Stone
       Adam Gross
       
- **Command length too large 22566
-    Trying to fix the sending of lsus...Packet is repeating advertisements, when to use ntohs or htons
-      
       
 Add a note to the final writeup about efficiency and implementation writeups
 
@@ -63,6 +60,12 @@ our particular pieces of code, etc. Only delete things from your section.
 
 Dan:
 -initialize the forwarding table the same way as the this_router->subnets
+- Need to fix the way static routes are handled
+	-Maybe add to sublist?
+	-The router needs a way to know about the next hop for the gateway to the internet
+
+
+
 
 
 Maddie:

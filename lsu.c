@@ -67,10 +67,12 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     }
     
     /* Adds advertisements to topology if necessary and recomputes FT if necessary.*/
+    fprintf(stderr, "About to add to top\n");
     if(add_to_top(ps->sr, source_rid, advertisements, num_ads_rcd)==1)
     {
         /*TODO TODO TODO: Need to send an LSU now!!!*/
     }
+     fprintf(stderr, "Exited add_to_top\n");
     
     /*free advertisements*/
     for(i = 0; i<num_ads_rcd; i++)
