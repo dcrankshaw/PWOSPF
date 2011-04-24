@@ -601,6 +601,7 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 	struct ftable_entry* response= NULL;
 	
 	/*LOCK MUTEX*/
+	fprintf(stderr,"About to Lock in get_dyn_routing_if\n");
 	pwospf_lock(ps->sr->ospf_subsys);
 	
 	struct ftable_entry *current = ps->sr->ospf_subsys->fwrd_table;
@@ -628,6 +629,7 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 	
 	if(response == NULL)
 	{
+		fprintf(stderr,"About to unLock in get_dyn_routing_if\n");
 		pwospf_unlock(ps->sr->ospf_subsys);
 		return NULL;
 	}
@@ -635,6 +637,7 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 	{
 		struct ftable_entry *retval = (struct ftable_entry *)malloc(sizeof(struct ftable_entry));
 		memmove(retval, response, sizeof(struct ftable_entry));
+		fprintf(stderr,"About to unLock in get_dyn_routing_if\n");
 		pwospf_unlock(ps->sr->ospf_subsys);
 		return retval;
 	}

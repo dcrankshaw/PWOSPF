@@ -107,8 +107,8 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 {
 	if(search_cache(ps->sr, ip)==NULL) /*Entry is not already in cache so add. */
 	{
-       lock_cache(ps->sr->arp_sub);
-       struct arp_cache_entry* cache_walker=0;
+        lock_cache(ps->sr->arp_sub);
+        struct arp_cache_entry* cache_walker=0;
         struct arp_cache_entry* prev = 0;
     
         assert(ps);
@@ -175,7 +175,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 			{
 		
 				memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
-				/***UNLONCK HERE*****/
+				unlock_cache(sr->arp_sub);
 				return mac;
 			}
 			else
