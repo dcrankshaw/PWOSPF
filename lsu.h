@@ -13,7 +13,7 @@
 
 int handle_lsu(struct ospfv2_hdr*, struct packet_state*, struct ip*);
 void send_lsu(struct sr_instance*);
-struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv*, struct sr_instance*);
+struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv*, struct sr_instance*, int);
 void forward_lsu(struct packet_state* ps, struct sr_instance* , uint8_t* , struct ospfv2_hdr*, struct ip* );
 void print_ads(struct ospfv2_lsu_adv* , int );
 

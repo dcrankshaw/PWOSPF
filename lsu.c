@@ -18,7 +18,6 @@
 
 int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip_hdr)
 {
-    fprintf(stderr, "In handle_lsu now\n");
     
    pwospf_lock(ps->sr->ospf_subsys);
    if(pwospf->rid==ps->sr->ospf_subsys->this_router->rid)
@@ -168,12 +167,21 @@ void send_lsu(struct sr_instance* sr)
             sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr);
     
     /*Generate Advertisements List*/
-    struct ospfv2_lsu_adv* advertisements=(struct ospfv2_lsu_adv*)malloc((my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv)));
-    struct ospfv2_lsu_adv* advs=generate_adv(advertisements, sr);
-    print_ads(advs, my_router->subnet_size);
+    struct sr_rt* rt_table_walker=sr->routing_table;
+    int num_entries_rt=0;
+    while(rt_table_walker)
+    {
+        num_entries_rt++;
+        rt_table_walker=rt_table_walker->next;
+    }
+    fprintf(stderr, "NUM ENTRIES in static routing table: %d\n", num_entries_rt);
+    struct ospfv2_lsu_adv* advertisements=(struct ospfv2_lsu_adv*)malloc
+                    ((my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv)));
+    struct ospfv2_lsu_adv* advs=generate_adv(advertisements, sr, num_entries_rt);
+    print_ads(advs, my_router->subnet_size + num_entries_rt);
     struct ospfv2_lsu_adv* adv_walker=advs;
     int j;
-    for(j=0; j<my_router->subnet_size; j++)
+    for(j=0; j<(my_router->subnet_size + num_entries_rt); j++)
     {
         memmove(pack, &adv_walker[j], sizeof(struct ospfv2_lsu_adv));
         pack+=sizeof(struct ospfv2_lsu_adv);
@@ -181,7 +189,7 @@ void send_lsu(struct sr_instance* sr)
     
     /*Advertisements are now in pack. pack points to end of last advertisement. 
     * Move pointer to where LSU header should begin. */
-    pack-=(my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv));
+    pack-=(my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv));
     pack-=(sizeof(struct ospfv2_lsu_hdr));
     
     /*Generate LSU Header */
@@ -189,7 +197,7 @@ void send_lsu(struct sr_instance* sr)
     sr->ospf_subsys->last_seq_sent++;
     lsu_hdr->seq=sr->ospf_subsys->last_seq_sent;
     lsu_hdr->ttl=INIT_TTL;
-    lsu_hdr->num_adv=htonl(my_router->subnet_size);
+    lsu_hdr->num_adv=htonl(my_router->subnet_size + num_entries_rt);
     
     memmove(pack,lsu_hdr, sizeof(struct ospfv2_lsu_hdr));
     pack-=(sizeof(struct ospfv2_hdr));
@@ -198,8 +206,7 @@ void send_lsu(struct sr_instance* sr)
     struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*) malloc(sizeof(struct ospfv2_hdr));
     pwospf_hdr->version=OSPF_V2;
     pwospf_hdr->type=OSPF_TYPE_LSU;
-    /*For length do I include ip and ethernet hdrs too???? */
-    pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size)*(sizeof(struct ospfv2_lsu_adv));
+    pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv));
     pwospf_hdr->rid=sr->ospf_subsys->this_router->rid;
     pwospf_hdr->aid= htonl(sr->ospf_subsys->area_id);
     pwospf_hdr->autype=OSPF_DEFAULT_AUTHKEY;
@@ -282,13 +289,15 @@ void send_lsu(struct sr_instance* sr)
 }
 
 /***Precondition: pwospf_subsystem already lock*/
-struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr)
+struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr, int num_entries_rt)
 {
     if(sr->ospf_subsys->this_router==NULL)
         return NULL;
     
+    int num_subs= sr->ospf_subsys->this_router->subnet_size;
+    
     int i;
-    for(i=0; i<sr->ospf_subsys->this_router->subnet_size; i++)
+    for(i=0; i<num_subs; i++)
     {
         struct route* temp_rt=sr->ospf_subsys->this_router->subnets[i];
         struct ospfv2_lsu_adv new_adv;
@@ -297,6 +306,21 @@ struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_insta
         new_adv.rid=htonl(temp_rt->r_id);
         advs[i]=new_adv;
     }
+    
+    struct sr_rt* rt_table_walker=sr->routing_table;
+
+    for(i=num_subs; i<(num_subs + num_entries_rt); i++)
+    {
+        
+        struct sr_rt* temp_rt=rt_table_walker;
+        struct ospfv2_lsu_adv new_adv;
+        new_adv.subnet=temp_rt->dest.s_addr;
+        new_adv.mask=temp_rt->mask.s_addr;
+        new_adv.rid=0;
+        advs[i]=new_adv;
+        rt_table_walker=rt_table_walker->next;
+    }
+    
     
     return advs;   
 } 

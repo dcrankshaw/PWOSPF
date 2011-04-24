@@ -28,12 +28,12 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		if(type == LSU)
 		{
 			add_to_lsu_buff(entry->lsu_buf, packet, len);
-			fprintf(stderr, "added to lsu buff\n");
+			fprintf(stderr, "1- added to lsu buff\n");
 		}
 		else
 		{
 			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			fprintf(stderr, "added to packet buff\n");
+			fprintf(stderr, "1- added to packet buff\n");
 		}
 	}
 	else
@@ -43,12 +43,12 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		if(type == LSU)
 		{
 			add_to_lsu_buff(entry->lsu_buf, packet, len);
-			fprintf(stderr, "added to lsu buff\n");
+			fprintf(stderr, "2 - added to lsu buff\n");
 		}
 		else
 		{
 			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			fprintf(stderr, "added to packet buff\n");
+			fprintf(stderr, "2 - added to packet buff\n");
 		}
 		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
 		args->sr = sr;
@@ -103,6 +103,7 @@ void* arp_req_init(void* a)
 		uint8_t* mac = search_cache(args->sr, temp); /*will be an array of 6 bytes*/
 		if(mac != NULL)
 		{
+		    fprintf(stderr, "ARP CACHE ENTRY FOUND!! SENDING ALL PACKS IN BUFF AND LSU_BUFF!!!\n");
 			lock_arp_q(args->sr->arp_sub);
 			send_all_packs(args->entry->pac_buf, mac, args->entry->iface_name, args->sr);
 			send_all_lsus(args->entry->lsu_buf, mac, args->entry->iface_name, args->sr);
@@ -111,6 +112,7 @@ void* arp_req_init(void* a)
 		}
 		else
 		{
+		    fprintf(stderr, "ARP CACHE ENTRY NOT FOUND!! Resending ARP Request Number %d!\n", i);
 			lock_arp_q(args->sr->arp_sub);
 			sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
 			args->entry->num_requests++;
@@ -134,6 +136,7 @@ void* arp_req_init(void* a)
 	args->entry->lsu_buf = NULL;
 	unlock_arp_q(args->sr->arp_sub);
 	free(args);
+	fprintf(stderr, "Terminating an ARP thread.\n");
 	return 0; /*return from thread's calling function, terminating thread*/
 }
 
