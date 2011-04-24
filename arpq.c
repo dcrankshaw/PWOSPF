@@ -35,6 +35,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
 			fprintf(stderr, "1- added to packet buff\n");
 		}
+		unlock_arp_q(sr->arp_sub);
 	}
 	else
 	{
@@ -178,14 +179,17 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 
 void lock_cache(struct arp_subsys* subsys)
 {
+    fprintf(stderr, "pre cache lock\n");
     if ( pthread_mutex_lock(&subsys->cache_lock) )
     { assert(0); }
+     fprintf(stderr, "post cache lock\n");
 } /* -- pwospf_subsys -- */
 
 
 void unlock_cache(struct arp_subsys* subsys)
 {
-    if ( pthread_mutex_unlock(&subsys->cache_lock) )
+    fprintf(stderr, "unlocked cache\n");
+   if ( pthread_mutex_unlock(&subsys->cache_lock) )
     { assert(0); }
 } /* -- pwospf_subsys -- */
 
@@ -193,8 +197,10 @@ void unlock_cache(struct arp_subsys* subsys)
 
 void lock_arp_q(struct arp_subsys* subsys)
 {
+     fprintf(stderr, "pre arpq lock\n");
     if ( pthread_mutex_lock(&subsys->arp_q_lock) )
     { assert(0); }
+     fprintf(stderr, "post arpq lock\n");
 } /* -- pwospf_subsys -- */
 
 
@@ -202,4 +208,5 @@ void unlock_arp_q(struct arp_subsys* subsys)
 {
     if ( pthread_mutex_unlock(&subsys->arp_q_lock) )
     { assert(0); }
+     fprintf(stderr, "unlocked arpq\n");
 } /* -- pwospf_subsys -- */

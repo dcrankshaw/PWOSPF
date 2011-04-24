@@ -110,7 +110,7 @@ void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct
 /*checks whether there are any expired entries in the topoology*/
 void check_top_invalid(struct sr_instance *sr)
 {
-	pwopsf_lock(sr->ospf_subsys);
+	pwospf_lock(sr->ospf_subsys);
 	struct adj_list *current = sr->ospf_subsys->network;
 	time_t now = time(NULL);
 	struct adj_list *prev = NULL;
@@ -143,7 +143,7 @@ void check_top_invalid(struct sr_instance *sr)
 			current = current->next;
 		}
 	}
-	pwopsf_lock(sr->ospf_subsys);
+	pwospf_unlock(sr->ospf_subsys);
 }
 
 /*THREADSAFE*/
@@ -650,9 +650,32 @@ void get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrr
 	}
 }
 
+
+struct pwospf_iflist* get_subnet_if(struct sr_instance *sr, struct route* subnet)
+{
+	fprintf(stderr, "Got here\n");
+	assert(subnet);
+	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
+	while(cur_if)
+	{
+		if((cur_if->mask.s_addr & cur_if->address.s_addr) == subnet->prefix.s_addr)
+		{
+			fprintf(stderr, "Found matching interface\n");
+			return cur_if;
+		}
+		else
+		{
+			cur_if = cur_if->next;
+		}
+	}
+	fprintf(stderr, "Got thru while loop\n");
+	return NULL;
+}
+
 /*NOT THREADSAFE*/
 int update_ftable(struct sr_instance *sr)
 {
+	
 	reset_ftable(sr);
 	struct adj_list *current_dest_rt = sr->ospf_subsys->network;
 	while(current_dest_rt)
@@ -663,11 +686,10 @@ int update_ftable(struct sr_instance *sr)
 		{
 			if(numhops == 0)
 			{
-				struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
 				struct ftable_entry* cur_ft_entry = NULL;
-				int i = 0;
-				//struct route* cur_sn = NULL;
-				while(cur_if)
+				int i;
+				fprintf(stderr, "Subnet Size: %d\n\n", sr->ospf_subsys->this_router->subnet_size);
+				for(i = 0; i < sr->ospf_subsys->this_router->subnet_size; i++)
 				{
 					if(sr->ospf_subsys->fwrd_table == 0)
 					{
@@ -676,20 +698,22 @@ int update_ftable(struct sr_instance *sr)
 					}
 					else
 					{
-						assert(cur_ft_entry);
-						cur_ft_entry->next = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
-						cur_ft_entry = cur_ft_entry->next;
+						//assert(cur_ft_entry);
+						//cur_ft_entry->next = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
+						cur_ft_entry = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
+						//cur_ft_entry = cur_ft_entry->next;
 					}
 					cur_ft_entry->prefix = sr->ospf_subsys->this_router->subnets[i]->prefix;
 					cur_ft_entry->mask = sr->ospf_subsys->this_router->subnets[i]->mask;
 					cur_ft_entry->next_hop = sr->ospf_subsys->this_router->subnets[i]->next_hop;
 					cur_ft_entry->num_hops = 0;
 					cur_ft_entry->next = 0;
-					memmove(cur_ft_entry->interface, cur_if->name, sr_IFACE_NAMELEN);
-					sr->ospf_subsys->this_router->subnet_size++;
-					i++;
-					//cur_if = cur_if->next;	
+					struct pwospf_iflist* iface = get_subnet_if(sr, sr->ospf_subsys->this_router->subnets[i]);
+					assert(iface);
+					memmove(cur_ft_entry->interface, iface->name, sr_IFACE_NAMELEN);
+					cur_ft_entry = cur_ft_entry->next;
 				}
+				
 			}
 			else
 			{
@@ -702,7 +726,6 @@ int update_ftable(struct sr_instance *sr)
 			struct pwospf_iflist *iface = NULL;
 			struct neighbor_list *nbr = NULL;
 			
-			/******&^$^$^%#^%^&*%&*)(*&^&&^&*%^&*%^&$^%$&%^#^&%*&^(*&^(%&*^$^%&#******/
 			
 			get_if_and_neighbor(iface, nbr, sr, next_hop->rid);
 			if(iface == NULL || nbr == NULL)
@@ -769,6 +792,7 @@ int update_ftable(struct sr_instance *sr)
 				}
 			}
 		}
+		current_dest_rt = current_dest_rt->next;
 	}
 	return 1;
 }
@@ -920,16 +944,19 @@ void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
    fprintf(stderr, "Locking in set_sequence()\n");
    pwospf_lock(sr->ospf_subsys);
    struct adj_list* net_walker=sr->ospf_subsys->network;
-    while(net_walker)
+	while(net_walker)
     {
+        fprintf(stderr, "In while loop\n");
         if(net_walker->rt->rid==router_id)
         {
             net_walker->rt->last_seq=sequence;
+            break;
         }
         else
             net_walker=net_walker->next;
     }
     pwospf_unlock(sr->ospf_subsys);
+    fprintf(stderr, "Unlocked in set_sequence()\n");
 }
 
 /*THREADSAFE*/

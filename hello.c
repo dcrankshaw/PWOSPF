@@ -126,7 +126,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				/*Basically, if we initialized the connection at startup, then later received an LSU*/
 				if(old_sub != NULL && old_sub->r_id == 0 && old_sub->mask.s_addr == ntohl(hello_hdr->nmask))
 				{
-						fprintf(stderr, "Will this line execute?");
 						old_sub->r_id = ntohl(pwospf_hdr->rid);
 				}
 			}
