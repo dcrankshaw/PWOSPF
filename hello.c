@@ -18,14 +18,6 @@
 #include "top_info.h"
 #include "hello.h"
 
-/*
-**************** GOES IN sr_init() IN sr_router.c *********************
-
-pwospf_iflist* interface_list;
-INTERFACE LIST NEEDS TO BE INITIALIZED WITH THE THREE INTERFACES:
-Including their IP address, netmask, and MAC address
-
-*/
 
 /*******************************************************************
 *   Called when handle_packet() receives a HELLO packet.
