@@ -44,6 +44,10 @@ TODO:
 -free all malloced members of structs in buffers
 -need a netmask config file
 
+-which route should follow for 0.0.0.0? vhost1's 0.0.0.0 entry is closes, but in 
+    static routing table
+
+-find out what entries need to be in static routing table. Rtable's must have at least 1 entry
  
 -probably some other stuff too
 
@@ -58,6 +62,9 @@ Dan:
 
 Maddie:
 --TEST FORWARDING
+--Test ICMP Port Unreachable
+--Are ARP Replies correctly being added to cache
+
 Adam:
 
 

@@ -106,7 +106,7 @@ void* arp_req_init(void* a)
 		uint8_t* mac = search_cache(args->sr, temp); /*will be an array of 6 bytes*/
 		if(mac != NULL)
 		{
-		    fprintf(stderr, "ARP CACHE ENTRY FOUND!! SENDING ALL PACKS IN BUFF AND LSU_BUFF!!!\n");
+		   // fprintf(stderr, "ARP CACHE ENTRY FOUND!! SENDING ALL PACKS IN BUFF AND LSU_BUFF!!!\n");
 			lock_arp_q(args->sr->arp_sub);
 			send_all_packs(args->entry->pac_buf, mac, args->entry->iface_name, args->sr);
 			send_all_lsus(args->entry->lsu_buf, mac, args->entry->iface_name, args->sr);
@@ -115,7 +115,7 @@ void* arp_req_init(void* a)
 		}
 		else
 		{
-		    fprintf(stderr, "ARP CACHE ENTRY NOT FOUND!! Resending ARP Request Number %d!\n", i);
+		    //fprintf(stderr, "ARP CACHE ENTRY NOT FOUND!! Resending ARP Request Number %d!\n", i);
 			lock_arp_q(args->sr->arp_sub);
 			sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
 			args->entry->num_requests++;
@@ -180,16 +180,16 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 
 void lock_cache(struct arp_subsys* subsys)
 {
-    fprintf(stderr, "pre cache lock\n");
+   // fprintf(stderr, "pre cache lock\n");
     if ( pthread_mutex_lock(&subsys->cache_lock) )
     { assert(0); }
-     fprintf(stderr, "post cache lock\n");
+     //fprintf(stderr, "post cache lock\n");
 } /* -- pwospf_subsys -- */
 
 
 void unlock_cache(struct arp_subsys* subsys)
 {
-    fprintf(stderr, "unlocked cache\n");
+   // fprintf(stderr, "unlocked cache\n");
    if ( pthread_mutex_unlock(&subsys->cache_lock) )
     { assert(0); }
 } /* -- pwospf_subsys -- */
@@ -198,10 +198,10 @@ void unlock_cache(struct arp_subsys* subsys)
 
 void lock_arp_q(struct arp_subsys* subsys)
 {
-     fprintf(stderr, "pre arpq lock\n");
+   // fprintf(stderr, "pre arpq lock\n");
     if ( pthread_mutex_lock(&subsys->arp_q_lock) )
     { assert(0); }
-     fprintf(stderr, "post arpq lock\n");
+     //fprintf(stderr, "post arpq lock\n");
 } /* -- pwospf_subsys -- */
 
 
@@ -209,5 +209,5 @@ void unlock_arp_q(struct arp_subsys* subsys)
 {
     if ( pthread_mutex_unlock(&subsys->arp_q_lock) )
     { assert(0); }
-     fprintf(stderr, "unlocked arpq\n");
+    // fprintf(stderr, "unlocked arpq\n");
 } /* -- pwospf_subsys -- */

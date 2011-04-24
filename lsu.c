@@ -55,13 +55,13 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
         temp_adv=(struct ospfv2_lsu_adv*)(ps->packet);
         temp_rt = (struct route*) malloc(sizeof(struct route));
         temp_rt->prefix.s_addr=temp_adv->subnet;
-        //fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(temp_rt->prefix));
+        fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(temp_rt->prefix));
         temp_rt->mask.s_addr=temp_adv->mask;
-        //fprintf(stderr, "Mask for new Route: %s\n", inet_ntoa(temp_rt->mask));
+        fprintf(stderr, "Mask for new Route: %s\n", inet_ntoa(temp_rt->mask));
         temp_rt->r_id=temp_adv->rid;
         struct in_addr new_rid;
         new_rid.s_addr=temp_rt->r_id;
-        //fprintf(stderr, "RID for new Route: %s\n", inet_ntoa(new_rid));        
+        fprintf(stderr, "RID for new Route: %s\n", inet_ntoa(new_rid));        
         advertisements[i]=temp_rt;
         ps->packet+=sizeof(struct ospfv2_lsu_adv);
     }
@@ -91,7 +91,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     ps->packet-=sizeof(struct ospfv2_lsu_hdr);
     ps->packet-=sizeof(struct ospfv2_hdr);
     
-    forward_lsu(ps, ps->sr, ps->packet, pwospf, ip_hdr);
+    forward_lsu(ps, ps->sr, ps->packet, pwospf, ip_hdr); /*ps->packet points to beginning of ip_hdr*/
     
     return 1;
   
@@ -99,7 +99,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
 
 void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet, struct ospfv2_hdr* pwospf_hdr, struct ip* ip_hdr)
 {
-    fprintf(stdeer, "IN FORWARD LSU!!\n");
+    fprintf(stderr, "IN FORWARD LSU!!\n");
     ip_hdr->ip_ttl--;
     if(ip_hdr->ip_ttl!=0)
     {
@@ -109,12 +109,17 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
         struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
         while(iface_walker)
         {
+            fprintf(stderr, "a\n");
             ip_hdr->ip_src=iface_walker->address;
             struct neighbor_list* neigh_walker=iface_walker->neighbors;
             while (neigh_walker)
             {
+                fprintf(stderr, "b\n");
                 if(neigh_walker->ip_address.s_addr==prev_src.s_addr)
+                {
+                    fprintf(stderr, "not forwarding lsu because neighbor is source.\n");
                     break;  /*Don't forward packet back to who we received lsu from */
+                }
                 ip_hdr->ip_dst=neigh_walker->ip_address;
                 ip_hdr->ip_sum=0;
                 ip_hdr->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
@@ -125,8 +130,8 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                 packet-=sizeof(struct sr_ethernet_hdr);
                 
                 /*Generate Ethernet Header*/
-                struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
-                eth_hdr->ether_type=ETHERTYPE_IP;
+                struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)packet;
+                eth_hdr->ether_type=htons(ETHERTYPE_IP);
                 
                 /*Find Interface to be sent out of's MAC Address*/
                 struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
@@ -136,24 +141,27 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                 uint8_t *mac=search_cache(ps->sr, ip_hdr->ip_dst.s_addr);
                 if(mac!=NULL)
                 {
+                    fprintf(stderr, "c\n");
                     memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
-                    memmove(packet, eth_hdr, sizeof(struct sr_ethernet_hdr));
-                    uint16_t packet_size=ip_hdr->ip_len + sizeof(struct sr_ethernet_hdr);
+                    uint16_t packet_size=ntohs(ip_hdr->ip_len)+ sizeof(struct sr_ethernet_hdr);
                     sr_send_packet(sr, packet, packet_size, iface_walker->name);
                     /*Packet has been sent*/
                 }
                 else
                 {
-                    fprintf(stderr, "About to get mac\n");
+                    fprintf(stderr, "d\n");
+                    fprintf(stderr, "About to get mac for forwarding\n");
                     get_mac_address(sr, ip_hdr->ip_dst, packet, ps->len, iface_walker->name, 1, NULL);
                     /**** NEED TO FREE ****/
-                }
-                free(eth_hdr);
-                
+                }    
+                neigh_walker=neigh_walker->next;
             }
-        
+            iface_walker=iface_walker->next;
         }
+        
+        fprintf(stderr, "Unlocking in forward_lsu()\n");
         pwospf_unlock(sr->ospf_subsys);
+        
     }
 }
 
@@ -280,6 +288,7 @@ void send_lsu(struct sr_instance* sr)
 /***Precondition: pwospf_subsystem already lock*/
 struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr, int num_entries_rt)
 {
+    print_nbr_list(sr);
     if(sr->ospf_subsys->this_router==NULL)
         return NULL;
     
@@ -292,7 +301,13 @@ struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_insta
         struct ospfv2_lsu_adv new_adv;
         new_adv.subnet=temp_rt->prefix.s_addr;
         new_adv.mask=temp_rt->mask.s_addr;
-        new_adv.rid=htonl(temp_rt->r_id);
+        struct in_addr rid;
+        rid.s_addr=temp_rt->r_id;
+        fprintf(stderr, "Before: Generating adv--RID: %s\n", inet_ntoa(rid));
+        //new_adv.rid=htonl(temp_rt->r_id);
+        new_adv.rid=temp_rt->r_id;
+        rid.s_addr=new_adv.rid;
+        fprintf(stderr, "After: Generating adv--RID: %s\n", inet_ntoa(rid));
         advs[i]=new_adv;
     }
     
