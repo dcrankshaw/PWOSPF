@@ -18,7 +18,6 @@
 
 int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip_hdr)
 {
-    fprintf(stderr, "In handle_lsu now\n");
     
    pwospf_lock(ps->sr->ospf_subsys);
    if(pwospf->rid==ps->sr->ospf_subsys->this_router->rid)
@@ -67,6 +66,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     }
     
     /* Adds advertisements to topology if necessary and recomputes FT if necessary.*/
+    
     if(add_to_top(ps->sr, source_rid, advertisements, num_ads_rcd)==1)
     {
         /*TODO TODO TODO: Need to send an LSU now!!!*/
