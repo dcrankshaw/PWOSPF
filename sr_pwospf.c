@@ -47,13 +47,13 @@ int pwospf_init(struct sr_instance* sr)
 	
 	
 	sr->ospf_subsys->network = 0;
-	sr->ospf_subsys->fwrd_table = 0;
 	printf("about to create interfaces...\n");
 	create_pwospf_ifaces(sr);
 	printf("created interfaces\n");
 	
 	char *eth0_interface = "eth0";
 	struct sr_if* zero = sr_get_interface(sr, eth0_interface);
+	sr->ospf_subsys->fwrd_table = 0;
 	sr->ospf_subsys->this_router = add_new_router(sr, zero->ip);
 	if(zero == NULL)
 	{
@@ -61,22 +61,19 @@ int pwospf_init(struct sr_instance* sr)
 	}
 	int i = 0;
 	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
+	struct ftable_entry* cur_ft_entry = NULL;
 	//struct route* cur_sn = NULL;
 	
 	while(cur_if)
 	{
 		
 		sr->ospf_subsys->this_router->subnets[i] = (struct route*)malloc(sizeof(struct route));
-		//cur_sn = sr->ospf_subsys->this_router->subnets[i];
 		sr->ospf_subsys->this_router->subnets[i]->mask.s_addr = cur_if->mask.s_addr;
-		//fprintf(stderr,"\nInterface mask:%s\nSubnet Mask: %s\n", inet_ntoa(cur_if->mask), inet_ntoa(sr->ospf_subsys->this_router->subnets[i]->mask));
 		struct in_addr temp_add;
 		struct in_addr temp_mask;
 		temp_add.s_addr = cur_if->address.s_addr;
 		temp_mask.s_addr = sr->ospf_subsys->this_router->subnets[i]->mask.s_addr;
-		//fprintf(stderr,"\n2Interface mask:%s\nSubnet Mask: %s\n", inet_ntoa(cur_if->mask), inet_ntoa(sr->ospf_subsys->this_router->subnets[i]->mask));
 		sr->ospf_subsys->this_router->subnets[i]->prefix.s_addr = (temp_add.s_addr & temp_mask.s_addr);
-		
 		if((cur_if->address.s_addr & cur_if->mask.s_addr) == cur_if->address.s_addr)
 		{
 			sr->ospf_subsys->this_router->subnets[i]->next_hop.s_addr = ntohl((htonl(cur_if->address.s_addr) | 1 ));
@@ -85,19 +82,29 @@ int pwospf_init(struct sr_instance* sr)
 		{
 			sr->ospf_subsys->this_router->subnets[i]->next_hop.s_addr = (cur_if->address.s_addr & cur_if->mask.s_addr);
 		}
-		
 		sr->ospf_subsys->this_router->subnets[i]->r_id = 0;
-		
+		if(sr->ospf_subsys->fwrd_table == 0)
+		{
+			sr->ospf_subsys->fwrd_table = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
+			cur_ft_entry = sr->ospf_subsys->fwrd_table;
+		}
+		else
+		{
+			cur_ft_entry->next = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
+			cur_ft_entry = cur_ft_entry->next;
+		}
+		cur_ft_entry->prefix = sr->ospf_subsys->this_router->subnets[i]->prefix;
+		cur_ft_entry->mask = sr->ospf_subsys->this_router->subnets[i]->mask;
+		cur_ft_entry->next_hop = sr->ospf_subsys->this_router->subnets[i]->next_hop;
+		cur_ft_entry->num_hops = 0;
+		cur_ft_entry->next = 0;
+		memmove(cur_ft_entry->interface, cur_if->name, sr_IFACE_NAMELEN);
 		sr->ospf_subsys->this_router->subnet_size++;
 		
 		i++;
 		cur_if = cur_if->next;	
 	}
 	print_subs(sr->ospf_subsys->this_router->subnets, sr->ospf_subsys->this_router->subnet_size);
-	/*TODO TODO TODO TODO*/
-	/* Will need to initialize the forwarding table the same way */
-	
-	
 	
 	sr->ospf_subsys->last_seq_sent = 0;
 	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
@@ -111,6 +118,7 @@ int pwospf_init(struct sr_instance* sr)
 
     return 0; /* success */
 } /* -- pwospf_init -- */
+
 
 
 /*---------------------------------------------------------------------

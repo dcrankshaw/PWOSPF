@@ -34,17 +34,12 @@ DONE?
 
 
 TODO:
--make sure that everywhere that I assume 2-IP subnet won't cause problems with the default
-router to the internet
-		-this may be okay because the default route is in the static routing table
--Locking and unlocking mutexes (esp in top_info.c, lsu.c, hello.c)
-		-includes double-checking that we don't need to lock it anywhere else (like in sr_router,
-		 arp, buffer)
+
 -conditional wait for LSU packets (so that we send packets every LSUINT seconds AND whenever we
  get a change to the link state update
 -Finish resolving issues between what Adam's add and delete neighbor methods do and what
- mine do. This includes the issues about initializing the interface subnets to RID = 0, then
- having to change it later on based on hello packets
+ mine do.
+ -Test delete from topo and delete neighbor
 -efficiency of ARP_cache delete method
 -free all malloced members of structs in buffers
 -need a netmask config file
@@ -59,14 +54,7 @@ This is so we each have a section of the README to pose questions to each other,
 our particular pieces of code, etc. Only delete things from your section.
 
 Dan:
--initialize the forwarding table the same way as the this_router->subnets
-- Need to fix the way static routes are handled
-	-Maybe add to sublist?
-	-The router needs a way to know about the next hop for the gateway to the internet
-
-
-
-
+-print out initialized forwarding table to check
 
 Maddie:
 --TEST FORWARDING
@@ -75,26 +63,22 @@ Adam:
 
 
 
-
-
-
 void add_to_existing_router(struct sr_instance *sr, struct route **routes, struct router* host, int num_ads)
 {
 	/*TODO: this is pretty inefficient, it may be alright though if these stay small enough */
-		int i;
-		for(i = 0; i < num_ads; i++)
+	int i;
+	for(i = 0; i < num_ads; i++)
+	{
+		if(router_contains_subnet(routes[i], host) == 1)
 		{
-			if(router_contains_subnet(routes[i], host) == 1)
+			if(router_contains(routes[i], host) == 0)
 			{
-				if(router_contains(routes[i], host) == 0)
-				{
-					/*dont add connection, remove the existing connection in host*/
-				}
+				/*dont add connection, remove the existing connection in host*/
 			}
-			else
-			{
-				add_new_route(sr, routes[i], host);
-			}
-			
 		}
+		else
+		{
+			add_new_route(sr, routes[i], host);
+		}
+	}
 }
