@@ -35,6 +35,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
 			fprintf(stderr, "1- added to packet buff\n");
 		}
+	    unlock_arp_q(sr->arp_sub);
 	}
 	else
 	{

@@ -66,6 +66,7 @@
         sr_send_packet(sr, buff->lsu_packet, buff->pack_len, iface);
         prev=buff;
         buff=buff->next;
+        free(prev->lsu_packet);
         free(prev);
     }
     free(buff);
@@ -79,6 +80,7 @@
     {
         prev=buff;
         buff=buff->next;
+        free(prev->lsu_packet);
         free(prev);
     }
     free(buff);
