@@ -28,7 +28,7 @@ int get_if_and_neighbor(struct pwospf_iflist *, struct neighbor_list *, struct s
 int update_ftable(struct sr_instance *);
 struct router* find_next_hop(struct sr_instance *sr, struct router *dest, int *hops);
 struct ftable_entry *ftable_contains(struct sr_instance *, struct in_addr, struct in_addr);
-int reset_ftable(struct sr_instance *);
+void reset_ftable(struct sr_instance *);
 void dijkstra(struct sr_instance*, struct router *);
 struct router* get_smallest_unknown(struct adj_list *);
 struct router* adj_list_contains(struct sr_instance *, uint32_t);

@@ -918,11 +918,11 @@ struct ftable_entry *ftable_contains(struct sr_instance *sr, struct in_addr pfix
 }
 
 /*NOT THREADSAFE*/
-int reset_ftable(struct sr_instance *sr)
+void reset_ftable(struct sr_instance *sr)
 {
-	
+	fprintf(stderr, "#*#*#*#*#*#*#*#*#*#*# Resetting forwarding table #*#*#*#*#*#*#*#*#*#*#\n");
 	struct ftable_entry *current = sr->ospf_subsys->fwrd_table;
-	sr->ospf_subsys->fwrd_table = NULL;
+	
 	struct ftable_entry *prev = NULL;
 	while(current)
 	{
@@ -931,7 +931,7 @@ int reset_ftable(struct sr_instance *sr)
 		free(prev);
 		prev = NULL;
 	}
-	return 1;
+	sr->ospf_subsys->fwrd_table = NULL;
 }
 
 
