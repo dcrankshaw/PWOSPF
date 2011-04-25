@@ -118,7 +118,7 @@ void check_top_invalid(struct sr_instance *sr)
 	struct adj_list *prev = NULL;
 	while(current)
 	{
-		if(current->rt->expired <= now && current->rt->rid != sr->ospf_subsys->this_router->rid)
+		if((current->rt->expired <= now) && (current->rt->rid != sr->ospf_subsys->this_router->rid))
 		{
 			remove_from_topo(sr, current->rt);
 			if(prev == NULL)
@@ -947,7 +947,9 @@ void dijkstra(struct sr_instance* sr, struct router *host)
 	{
 		struct in_addr lu_id;
 		lu_id.s_addr = least_unknown->rid;
-		//fprintf(stderr, "Least unknown: %s, ", inet_ntoa(lu_id));
+		fprintf(stderr, "Least unknown: %s ", inet_ntoa(lu_id));
+		fprintf(stderr, "has %d adjacencies\n", least_unknown->adj_size);
+		
 		least_unknown->known = 1; /*mark it as visited*/
 		int i;
 		
