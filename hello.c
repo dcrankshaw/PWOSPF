@@ -51,6 +51,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		int found = 0;
 		while(iface)
 		{
+		    delete_neighbor_list(iface);
 			if(strcmp(iface->name, ps->interface) == 0) /* if the current interface equals the incoming interface */
 			{
 				
@@ -91,10 +92,11 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 							prev=neighbor_list_walker;
 							neighbor_list_walker=neighbor_list_walker->next;
 						}
-						else if(neighbor_list_walker->timenotvalid < time(NULL))
+					/*	else if(neighbor_list_walker->timenotvalid < time(NULL))
 						{
 							neighbor_list_walker = delete_neighbor_list(iface, neighbor_list_walker, prev);
-						}
+						   
+						}*/
 						else
 						{
 						    prev = neighbor_list_walker;
@@ -148,10 +150,55 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 /*******************************************************************
 *   Deletes a neigbor_list_entry from neighbors.
 *******************************************************************/
-struct neighbor_list* delete_neighbor_list(struct pwospf_iflist* iface, struct neighbor_list* walker, struct neighbor_list* prev)
+void delete_neighbor_list(struct pwospf_iflist* iface)
 {
-		
-	if(prev == 0)          /* Item is first in list. */  
+    struct neighbor_list* walker = iface->neighbors;
+    struct neighbor_list* prev = NULL;
+    time_t curr_time;
+    while(walker)
+    {
+        curr_time=time(NULL);
+    	if(walker->timenotvalid < curr_time)
+    	{
+			if(prev==0)         /* Item is first in cache. */  
+			{
+				if(iface->neighbors->next)
+				{
+					iface->neighbors=iface->neighbors->next;
+					free(walker);
+					walker = iface->neighbors;
+				}	
+				else
+				{
+					/*Getting a SEGFAULT*/
+					iface->neighbors = NULL;
+					free(walker);
+					break;
+				}
+			}
+			else if(!walker->next) /* Item is last in cache. */
+			{
+				prev->next=NULL;
+				free(walker);
+				break;
+			}
+			else                    /* Item is in the middle of cache. */
+			{
+				prev->next=walker->next;
+				free(walker);
+				walker = prev->next;
+			}
+			
+		}
+		else
+		{
+			prev = walker;
+			walker = walker->next;
+		}
+    
+    }
+	/*	
+	if(prev == 0)          
 	{
 		if(iface->neighbors->next)
 		{
@@ -166,19 +213,19 @@ struct neighbor_list* delete_neighbor_list(struct pwospf_iflist* iface, struct n
 			return NULL;
 		}
 	}
-	else if(!walker->next) /* Item is last in list. */
+	else if(!walker->next) 
 	{
 		prev->next = NULL;
 		free(walker);
 		return NULL;
 	}
-	else                    /* Item is in the middle of list. */
+	else                    
 	{
 		prev->next = walker->next;
 		free(walker);
 		return prev->next;
 	}
-	
+	*/
 	/* Walker is still on item to be deleted so free that item. */
 /*	if(walker)
 		free(walker);*/

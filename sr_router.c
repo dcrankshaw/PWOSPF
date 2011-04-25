@@ -53,8 +53,6 @@ void sr_init(struct sr_instance* sr)
     assert(sr);
 
     /* Add initialization code here! */
-	sr->arp_cache=0;
-	sr->queue=0;
 	sr->flow_table = 0;
 	sr->rules = 0;
 	sr->ft_size = 0;

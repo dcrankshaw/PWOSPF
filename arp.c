@@ -116,18 +116,18 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
         assert(mac);
         assert(ip);
     
-        if(ps->sr->arp_cache ==0)	/*If there are no entries in cache */
+        if(ps->sr->arp_sub->arp_cache ==0)	/*If there are no entries in cache */
         {
-            ps->sr->arp_cache=(struct arp_cache_entry*)malloc(sizeof(struct arp_cache_entry));
-            assert(ps->sr->arp_cache);
-            ps->sr->arp_cache->next=0;
-            ps->sr->arp_cache->ip_add=ip;
-            memmove(ps->sr->arp_cache->mac, mac,ETHER_ADDR_LEN);
-            ps->sr->arp_cache->timenotvalid=time(NULL) +ARP_TIMEOUT;
+            ps->sr->arp_sub->arp_cache=(struct arp_cache_entry*)malloc(sizeof(struct arp_cache_entry));
+            assert(ps->sr->arp_sub->arp_cache);
+            ps->sr->arp_sub->arp_cache->next=0;
+            ps->sr->arp_sub->arp_cache->ip_add=ip;
+            memmove(ps->sr->arp_sub->arp_cache->mac, mac,ETHER_ADDR_LEN);
+            ps->sr->arp_sub->arp_cache->timenotvalid=time(NULL) +ARP_TIMEOUT;
         }
         else
         {
-            cache_walker = ps->sr->arp_cache;
+            cache_walker = ps->sr->arp_sub->arp_cache;
             
            /* while(cache_walker->next)
             {
@@ -162,25 +162,26 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 
 void check_cache_invalid(struct sr_instance* sr)
 {
-    struct arp_cache_entry* walker = sr->arp_cache;
+    struct arp_cache_entry* walker = sr->arp_sub->arp_cache;
     struct arp_cache_entry* prev = NULL;
-    time_t curr_time = time(NULL);
+    time_t curr_time;
     while(walker)
     {
+        curr_time=time(NULL);
     	if(walker->timenotvalid < curr_time)
     	{
 			if(prev==0)         /* Item is first in cache. */  
 			{
-				if(sr->arp_cache->next)
+				if(sr->arp_sub->arp_cache->next)
 				{
-					sr->arp_cache=sr->arp_cache->next;
+					sr->arp_sub->arp_cache=sr->arp_sub->arp_cache->next;
 					free(walker);
-					walker = sr->arp_cache;
+					walker = sr->arp_sub->arp_cache;
 				}	
 				else
 				{
 					/*Getting a SEGFAULT*/
-					sr->arp_cache = NULL;
+					sr->arp_sub->arp_cache = NULL;
 					free(walker);
 					break;
 				}
@@ -221,20 +222,22 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	print_cache(sr);
 	check_cache_invalid(sr);
     
-    unsigned char* mac=(unsigned char *)malloc(ETHER_ADDR_LEN);
+   // unsigned char* mac=(unsigned char *)malloc(ETHER_ADDR_LEN);
     
 	struct arp_cache_entry* cache_walker=0;
 	//struct arp_cache_entry* prev=0;
-	cache_walker=sr->arp_cache;
+	cache_walker=sr->arp_sub->arp_cache;
 	
 	while(cache_walker)
 	{
 		if(ip==cache_walker->ip_add)
 		{
 	
-			memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
+			//memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
 			unlock_cache(sr->arp_sub);
-			return mac;
+			fprintf(stderr, "FROM SEARCHING CACHE--RETURN: ");
+			DebugMAC(cache_walker->mac);
+			return cache_walker->mac;
 		}
 		else
 		{
@@ -275,8 +278,8 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	unlock_cache(sr->arp_sub);
 	// fprintf(stderr, "unlocked in search cache\n");
 	/*This free is causing major issues, SEGFAULT*/
-	if(mac)
-	    free(mac);
+	/*if(mac)
+	    free(mac);*/
 	return NULL;
 }
 
@@ -287,16 +290,16 @@ struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_en
 {
     if(prev==0)         /* Item is first in cache. */  
     {
-        if(sr->arp_cache->next)
+        if(sr->arp_sub->arp_cache->next)
         {
-            sr->arp_cache=sr->arp_cache->next;
+            sr->arp_sub->arp_cache=sr->arp_sub->arp_cache->next;
             free(walker);
-            return sr->arp_cache;
+            return sr->arp_sub->arp_cache;
         }	
         else
         {
             /*Getting a SEGFAULT*/
-            sr->arp_cache = NULL;
+            sr->arp_sub->arp_cache = NULL;
             free(walker);
             return NULL;
         }
@@ -322,12 +325,12 @@ void print_cache(struct sr_instance* sr)
 {
 	printf("---ARP CACHE---\n");
 	struct arp_cache_entry* cache_walker=0;
-	if(sr->arp_cache==0)
+	if(sr->arp_sub->arp_cache==0)
 	{
 		printf(" ARP Cache is Empty.\n");
 		return;
 	}
-	cache_walker=sr->arp_cache;
+	cache_walker=sr->arp_sub->arp_cache;
 	while(cache_walker)
 	{
 		print_cache_entry(cache_walker);
