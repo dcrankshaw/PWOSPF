@@ -41,5 +41,6 @@ void print_topo(struct sr_instance *sr);
 void print_rt(struct router* rt);
 struct pwospf_iflist* get_subnet_if(struct sr_instance *, struct route*);
 void print_ftable(struct sr_instance *);
+void remove_rt_adj_using_id(struct sr_instance *, struct router*, uint32_t);
 
 #endif
