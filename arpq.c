@@ -23,34 +23,34 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 	struct arpq* entry = get_entry(sr, next_hop);
 	if(entry != NULL)
 	{
-	    fprintf(stderr, "Arpq entry found.\n");
+	    //fprintf(stderr, "Arpq entry found.\n");
 		/*TODO: check if expired entry*/
 		if(type == LSU)
 		{
 			add_to_lsu_buff(entry->lsu_buf, packet, len);
-			fprintf(stderr, "1- added to lsu buff\n");
+			//fprintf(stderr, "1- added to lsu buff\n");
 		}
 		else
 		{
 			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			fprintf(stderr, "1- added to packet buff\n");
+			//fprintf(stderr, "1- added to packet buff\n");
 		}
 
 	    unlock_arp_q(sr->arp_sub);
 	}
 	else
 	{
-	    fprintf(stderr, "Arpq entry not found.\n");
+	    //fprintf(stderr, "Arpq entry not found.\n");
 		entry = create_entry(sr, sr->arp_sub, next_hop, iface);
 		if(type == LSU)
 		{
 			add_to_lsu_buff(entry->lsu_buf, packet, len);
-			fprintf(stderr, "2 - added to lsu buff\n");
+			//fprintf(stderr, "2 - added to lsu buff\n");
 		}
 		else
 		{
 			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			fprintf(stderr, "2 - added to packet buff\n");
+			//fprintf(stderr, "2 - added to packet buff\n");
 		}
 		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
 		args->sr = sr;
@@ -139,7 +139,7 @@ void* arp_req_init(void* a)
 	args->entry->lsu_buf = NULL;
 	unlock_arp_q(args->sr->arp_sub);
 	free(args);
-	fprintf(stderr, "Terminating an ARP thread.\n");
+	//fprintf(stderr, "Terminating an ARP thread.\n");
 	return 0; /*return from thread's calling function, terminating thread*/
 }
 

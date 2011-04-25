@@ -203,7 +203,7 @@ void* pwospf_run_thread(void* arg)
 
 int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
 {
-    fprintf(stderr, "Got to handle_pwospf\n");
+    //fprintf(stderr, "Got to handle_pwospf\n");
     ps->packet= ps->packet + sizeof(struct ip);
     struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*)(ps->packet);
     fprintf(stderr, "Type: %u\n", pwospf_hdr->type);

@@ -24,12 +24,12 @@
 ********************************************************************/
 void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 {
-    fprintf(stderr, "In handle_hello\n");
+    //fprintf(stderr, "In handle_hello\n");
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;
 	
 	/*lock pwospf subsys*/
-	fprintf(stderr, "Locking in handle_hello()\n");
+	//fprintf(stderr, "Locking in handle_hello()\n");
 	pwospf_lock(ps->sr->ospf_subsys);
 	struct pwospf_iflist* iface = ps->sr->ospf_subsys->interfaces;
 
@@ -73,7 +73,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 					iface->neighbors->id = pwospf_hdr->rid;
 					struct in_addr rid;
 					rid.s_addr=pwospf_hdr->rid;
-					fprintf(stderr, "RID FROM HELLO: %s\n",inet_ntoa(rid));
+					//fprintf(stderr, "RID FROM HELLO: %s\n",inet_ntoa(rid));
 					iface->neighbors->ip_address = ip_hdr->ip_src;
 					iface->neighbors->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 					found = 1;
@@ -123,11 +123,11 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				{
 					struct in_addr rid;
                     rid.s_addr=pwospf_hdr->rid;
-                    fprintf(stderr, "Before: UPDATING SUB--RID: %s\n", inet_ntoa(rid));
+                    //fprintf(stderr, "Before: UPDATING SUB--RID: %s\n", inet_ntoa(rid));
                     //old_sub->r_id = ntohl(pwospf_hdr->rid);
                     old_sub->r_id = pwospf_hdr->rid;
                     rid.s_addr=old_sub->r_id;
-                    fprintf(stderr, "After: UPDATING SUB--RID: %s\n", inet_ntoa(rid));
+                    //fprintf(stderr, "After: UPDATING SUB--RID: %s\n", inet_ntoa(rid));
 
 				}
 			}
@@ -251,7 +251,7 @@ void send_HELLO(struct sr_instance* sr)
 	/* Set IP destination IP address to 224.0.0.5 (0xe0000005) (Broadcast) */
 	
 	ip_hdr->ip_hl = (sizeof(struct ip))/4;
-	fprintf(stderr, "IP header length: %u\n", ip_hdr->ip_hl);
+	//fprintf(stderr, "IP header length: %u\n", ip_hdr->ip_hl);
 	ip_hdr->ip_v = IP_VERSION;
 	ip_hdr->ip_tos=ROUTINE_SERVICE;
 	ip_hdr->ip_len = htons(packet_size - sizeof(struct sr_ethernet_hdr));
@@ -269,7 +269,7 @@ void send_HELLO(struct sr_instance* sr)
 	pwospf_hdr->version = OSPF_V2;
 	pwospf_hdr->type = OSPF_TYPE_HELLO;
 	pwospf_hdr->len = htons(sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_hello_hdr));
-	fprintf(stderr, "Locking in send_hello()\n");
+	//fprintf(stderr, "Locking in send_hello()\n");
 	pwospf_lock(sr->ospf_subsys);
 	pwospf_hdr->rid = sr->ospf_subsys->this_router->rid;
 	pwospf_hdr->aid = htonl(sr->ospf_subsys->area_id);

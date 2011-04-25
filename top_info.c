@@ -295,18 +295,18 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 				int num_ads)
 {
 	
-	fprintf(stderr, "Locking in add_to_top()\n");
+	//fprintf(stderr, "Locking in add_to_top()\n");
 	pwospf_lock(sr->ospf_subsys);
 	//fprintf(stderr, "Locked ospf subsys\n");
 	struct router* host = adj_list_contains(sr, host_rid);
 	if(host != NULL)
 	{
-		fprintf(stderr, "1 - Found an existing router\n");
+		//fprintf(stderr, "1 - Found an existing router\n");
 		add_to_existing_router(sr, advert_routes, host, num_ads);	
 	}
 	else
 	{
-		fprintf(stderr, "2 - Did not find a router\n");
+		//fprintf(stderr, "2 - Did not find a router\n");
 		host = add_new_router(sr, host_rid);
 		if(host != NULL)
 		{
@@ -448,7 +448,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 					cur_router->rt->adjacencies = realloc(cur_router->rt->adjacencies, 2*cur_router->rt->adj_buf_size);
 					cur_router->rt->adj_buf_size *= 2;
 				}
-				fprintf(stderr, "Found matching router\n");
+				//fprintf(stderr, "Found matching router\n");
 				struct route* other_sub = router_contains_subnet(cur_router->rt, current->prefix.s_addr);
 				if(other_sub != NULL)
 				{
@@ -479,8 +479,8 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 							}
 							if(exists == 0)
 							{
-								fprintf(stderr, "This should happen\n");
-								fprintf(stderr, "Adding to adjacency list\n");
+								//fprintf(stderr, "This should happen\n");
+								//fprintf(stderr, "Adding to adjacency list\n");
 								cur_router->rt->adjacencies[cur_router->rt->adj_size] = host;
 								cur_router->rt->adj_size++;
 							}
@@ -539,8 +539,8 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 				}
 				else
 				{
-					fprintf(stderr, "Added new connection\n");
-					fprintf(stderr, "Adding to adjacency list\n");
+					//fprintf(stderr, "Added new connection\n");
+					//fprintf(stderr, "Adding to adjacency list\n");
 					cur_router->rt->adjacencies[cur_router->rt->adj_size] = host;
 					cur_router->rt->adj_size++;
 					host->adjacencies[host->adj_size] = cur_router->rt;
@@ -568,7 +568,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 		if(!added)
 		{
 			/*create new router*/
-			fprintf(stderr, "created new router\n");
+			//fprintf(stderr, "created new router\n");
 			struct router *new_adj = add_new_router(sr, current->r_id);
 			host->adjacencies[host->adj_size] = new_adj;
 			host->adj_size++;
@@ -591,7 +591,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 /*NOT THREADSAFE*/
 struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 {
-	fprintf(stderr,"In Adding a new router.\n");
+	//fprintf(stderr,"In Adding a new router.\n");
 	struct router* new_router = (struct router*)malloc(sizeof(struct router));
 	struct adj_list *new_adj_entry = (struct adj_list *)malloc(sizeof(struct adj_list));
 	
@@ -679,14 +679,14 @@ void get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrr
 
 struct pwospf_iflist* get_subnet_if(struct sr_instance *sr, struct route* subnet)
 {
-	fprintf(stderr, "Got here\n");
+	//fprintf(stderr, "Got here\n");
 	assert(subnet);
 	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
 	while(cur_if)
 	{
 		if((cur_if->mask.s_addr & cur_if->address.s_addr) == subnet->prefix.s_addr)
 		{
-			fprintf(stderr, "Found matching interface\n");
+			//fprintf(stderr, "Found matching interface\n");
 			return cur_if;
 		}
 		else
@@ -694,7 +694,7 @@ struct pwospf_iflist* get_subnet_if(struct sr_instance *sr, struct route* subnet
 			cur_if = cur_if->next;
 		}
 	}
-	fprintf(stderr, "Got thru while loop\n");
+	//fprintf(stderr, "Got thru while loop\n");
 	return NULL;
 }
 
@@ -714,7 +714,7 @@ int update_ftable(struct sr_instance *sr)
 			{
 				struct ftable_entry* cur_ft_entry = NULL;
 				int i;
-				fprintf(stderr, "Subnet Size: %d\n\n", sr->ospf_subsys->this_router->subnet_size);
+				//fprintf(stderr, "Subnet Size: %d\n\n", sr->ospf_subsys->this_router->subnet_size);
 				for(i = 0; i < sr->ospf_subsys->this_router->subnet_size; i++)
 				{
 					if(sr->ospf_subsys->fwrd_table == 0)
@@ -888,6 +888,8 @@ int reset_ftable(struct sr_instance *sr)
 /*NOT THREADSAFE*/
 void dijkstra(struct sr_instance* sr, struct router *host)
 {
+	fprintf(stderr, "Starting Dijkstra's\n");
+	
 	struct adj_list *current = sr->ospf_subsys->network;
 	while(current != NULL)
 	{
@@ -899,21 +901,43 @@ void dijkstra(struct sr_instance* sr, struct router *host)
 	
 	
 	sr->ospf_subsys->this_router->dist = 0;
+	struct in_addr thisid;
+	thisid.s_addr = sr->ospf_subsys->this_router->rid;
+	fprintf(stderr, "This router: %s, ", inet_ntoa(thisid));
+	//sr->ospf_subsys->this_router->known = 1;
 	struct router* least_unknown = get_smallest_unknown(sr->ospf_subsys->network);
 	while(least_unknown != NULL)
 	{
+		struct in_addr lu_id;
+		lu_id.s_addr = least_unknown->rid;
+		fprintf(stderr, "Least unknown: %s, ", inet_ntoa(lu_id));
 		least_unknown->known = 1; /*mark it as visited*/
 		int i;
-		struct router *w;
+		
 		for(i = 0; i < least_unknown->adj_size; i++)
 		{
+			struct router *w;
 			w = least_unknown->adjacencies[i];
+			struct in_addr w_id;
+			w_id.s_addr = w->rid;
+			fprintf(stderr, "Before while loop, w: %s\n", inet_ntoa(w_id));
 			if(w->known == 0)
 			{
-				if((least_unknown->dist + 1) < w->dist || w->dist < 0)
+				fprintf(stderr, "w->known == 0\n");
+				fprintf(stderr, "%d\n", least_unknown->dist + 1);
+				fprintf(stderr, "w->dist = %d\n", w->dist);
+				
+				
+				if(((least_unknown->dist + 1) < w->dist) || (w->dist < 0))
 				{
+					fprintf(stderr, "YAY, entered the right loop!!!!!!!!!!!!!!!!!!!!!!\n");
 					w->dist = least_unknown->dist + 1; /* update the cost */
 					w->prev = least_unknown;
+					w_id.s_addr = w->rid;
+					fprintf(stderr, "w: %s, ", inet_ntoa(w_id));
+					struct in_addr prev_id;
+					prev_id.s_addr = w->prev->rid;
+					fprintf(stderr, "prev: %s\n", inet_ntoa(prev_id));
 				}
 			}
 		}
@@ -928,17 +952,26 @@ struct router* get_smallest_unknown(struct adj_list *current)
 	int min_dist = -1;
 	while(current != NULL)
 	{
-		if(current->rt->known)
+		if(current->rt->known == 1)
 		{
 			current = current->next;
 		}
+		else if(current->rt->dist < 0)
+		{
+			current = current->next;
+		}
+		else if(min_dist > current->rt->dist)
+		{
+			min_dist = current->rt->dist;
+			least_unknown = current->rt;
+		}
+		else if(min_dist < 0)
+		{
+			min_dist = current->rt->dist;
+			least_unknown = current->rt;
+		}
 		else
 		{
-			if((min_dist < 0 && current->rt->dist >= 0) || (min_dist > current->rt->dist))
-			{
-				min_dist = current->rt->dist;
-				least_unknown = current->rt;
-			}
 			current = current->next;
 		}
 	}
@@ -948,7 +981,7 @@ struct router* get_smallest_unknown(struct adj_list *current)
 /*NOT THREADSAFE*/
 uint16_t get_sequence(uint32_t router_id, struct sr_instance *sr)
 {
-    fprintf(stderr, "Locking in get_sequence()\n");
+    //fprintf(stderr, "Locking in get_sequence()\n");
     pwospf_lock(sr->ospf_subsys);
     struct adj_list* net_walker=sr->ospf_subsys->network;
     while(net_walker)
@@ -967,12 +1000,12 @@ uint16_t get_sequence(uint32_t router_id, struct sr_instance *sr)
 /*NOT THREADSAFE*/
 void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
 {
-   fprintf(stderr, "Locking in set_sequence()\n");
+   //fprintf(stderr, "Locking in set_sequence()\n");
    pwospf_lock(sr->ospf_subsys);
    struct adj_list* net_walker=sr->ospf_subsys->network;
 	while(net_walker)
     {
-        fprintf(stderr, "In while loop\n");
+        //fprintf(stderr, "In while loop\n");
         if(net_walker->rt->rid==router_id)
         {
             net_walker->rt->last_seq=sequence;
@@ -982,7 +1015,7 @@ void set_sequence(uint32_t router_id, uint16_t sequence, struct sr_instance *sr)
             net_walker=net_walker->next;
     }
     pwospf_unlock(sr->ospf_subsys);
-    fprintf(stderr, "Unlocked in set_sequence()\n");
+    //fprintf(stderr, "Unlocked in set_sequence()\n");
 }
 
 /*THREADSAFE*/
