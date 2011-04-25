@@ -85,7 +85,7 @@ struct arpq* get_entry(struct sr_instance *sr, struct in_addr next_hop)
 		{
 			return current;
 		}
-		current = current->next;
+		current=current->next;
 	}
 	return NULL;
 }
