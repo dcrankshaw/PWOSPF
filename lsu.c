@@ -247,7 +247,7 @@ void send_lsu(struct sr_instance* sr)
         while (neigh_walker)
         {
             /*Finish constructing IP Header */
-            fprintf(stderr, "PREV SEGFAULT here:\n");
+            //fprintf(stderr, "PREV SEGFAULT here:\n");
            /*Neigh_walker causing issues here -- Probably because delete from neighbor_list has problems*/
             ip_hdr->ip_dst=neigh_walker->ip_address;
             ip_hdr->ip_sum=0;

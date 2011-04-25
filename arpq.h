@@ -15,7 +15,7 @@ struct arp_subsys
 	struct arp_cache_entry* arp_cache;
 	pthread_mutex_t cache_lock;
 	pthread_mutex_t arp_q_lock;
-};
+} __attribute__ ((packed));
 
 struct arpq
 {
@@ -34,7 +34,7 @@ struct thread_args
 {
 	struct sr_instance* sr;
 	struct arpq* entry;
-};
+} __attribute__ ((packed));
 
 
 

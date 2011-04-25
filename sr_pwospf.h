@@ -30,7 +30,7 @@ struct route
 	struct in_addr next_hop; /*probably don't need*/
 	uint32_t r_id;
 
-};
+} __attribute__ ((packed));
 
 
 struct router
@@ -44,6 +44,7 @@ struct router
 	int subnet_size;
 	
 	uint16_t last_seq;
+	/*time time*/
 	time_t expired;
 	
 	uint32_t rid;
@@ -52,13 +53,13 @@ struct router
 	int known;
 	int dist;
 	struct router *prev;
-};
+} __attribute__ ((packed));
 
 struct adj_list
 {
 	struct router *rt;
 	struct adj_list *next;
-};
+} __attribute__ ((packed));
 
 
 /*TODO: make sure this is the right way to define an entry in the forwarding table*/
@@ -71,7 +72,7 @@ struct ftable_entry
 	char interface[sr_IFACE_NAMELEN];	/*the interface to send the packet out of*/
 	int num_hops;
 	struct ftable_entry *next;
-};
+} __attribute__ ((packed));
 
 struct pwospf_iflist
 {
@@ -82,15 +83,16 @@ struct pwospf_iflist
 	unsigned char mac[ETHER_ADDR_LEN];
 	struct neighbor_list *neighbors;
 	struct pwospf_iflist *next;
-};
+} __attribute__ ((packed));
 
 struct neighbor_list
 {
 	uint32_t id;
 	struct in_addr ip_address;
+	/*time time*/
 	time_t timenotvalid;                /*The time when this entry is no longer valid*/
 	struct neighbor_list *next;
-};
+} __attribute__ ((packed));
 
 struct pwospf_subsys
 {

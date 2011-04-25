@@ -920,6 +920,7 @@ struct ftable_entry *ftable_contains(struct sr_instance *sr, struct in_addr pfix
 /*NOT THREADSAFE*/
 int reset_ftable(struct sr_instance *sr)
 {
+	
 	struct ftable_entry *current = sr->ospf_subsys->fwrd_table;
 	sr->ospf_subsys->fwrd_table = NULL;
 	struct ftable_entry *prev = NULL;
@@ -928,6 +929,7 @@ int reset_ftable(struct sr_instance *sr)
 		prev = current;
 		current = current->next;
 		free(prev);
+		prev = NULL;
 	}
 	return 1;
 }

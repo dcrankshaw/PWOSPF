@@ -170,7 +170,7 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 	}
 	else
 	{
-	    fprintf(stderr, "Pending is NOTTTT empty. Adding new entry. \n");
+	    fprintf(stderr, "Pending is NOT empty. Adding new entry. \n");
 		struct arpq* walker = arp_sub->pending;
 		while(walker->next)
 		{

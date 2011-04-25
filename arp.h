@@ -23,7 +23,7 @@ struct arp_cache_entry
     unsigned char mac[ETHER_ADDR_LEN];
     time_t timenotvalid;                /*The time when this entry is no longer valid*/
     struct arp_cache_entry* next;
-};
+} __attribute__ ((packed));
 
 void arp_init(struct sr_instance*);
 uint8_t* handle_ARP(struct packet_state*, struct sr_ethernet_hdr*);
@@ -36,6 +36,7 @@ void print_cache_entry(struct arp_cache_entry*);
 void print_cache(struct sr_instance*);
 void construct_reply(struct packet_state*, const struct sr_arphdr*, const unsigned char*, const struct sr_ethernet_hdr*);
 uint8_t* construct_request(struct sr_instance*, const char*,const uint32_t);
+void check_cache_invalid(struct sr_instance*);
 /*void testing(struct packet_state*, struct sr_arphdr *);*/
 
 #endif

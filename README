@@ -67,11 +67,12 @@ our particular pieces of code, etc. Only delete things from your section.
 
 Dan:
 -print out initialized forwarding table to check
--need to finish delete_from_top
+-need to test delete_from_top
+-Segfaults in reset ftable
 
 Maddie:
 --TEST FORWARDING--Commented out right now.
---Test ICMP Port Unreachable
+--Test ICMP Port Unreachable - PROBABLY NOT WORKING
 --Are ARP Replies correctly being added to cache
 --- We seem to be adding multiple requests for the same dest to arpq
 

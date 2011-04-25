@@ -110,7 +110,7 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 	{
         lock_cache(ps->sr->arp_sub);
         struct arp_cache_entry* cache_walker=0;
-        struct arp_cache_entry* prev = 0;
+        //struct arp_cache_entry* prev = 0;
     
         assert(ps);
         assert(mac);
@@ -129,7 +129,7 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
         {
             cache_walker = ps->sr->arp_cache;
             
-            while(cache_walker->next)
+           /* while(cache_walker->next)
             {
                 if(cache_walker->timenotvalid < time(NULL))
                 {
@@ -140,6 +140,11 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
                		prev = cache_walker;
                		cache_walker=cache_walker->next;
                	}	
+            }*/
+            
+            while(cache_walker->next)
+            {
+            	cache_walker=cache_walker->next;
             }
             cache_walker->next=(struct arp_cache_entry*)malloc(sizeof(struct arp_cache_entry));
             assert(cache_walker->next);
@@ -155,6 +160,54 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
         free(mac_from_cache);
 }
 
+void check_cache_invalid(struct sr_instance* sr)
+{
+    struct arp_cache_entry* walker = sr->arp_cache;
+    struct arp_cache_entry* prev = NULL;
+    time_t curr_time = time(NULL);
+    while(walker)
+    {
+    	if(walker->timenotvalid < curr_time)
+    	{
+			if(prev==0)         /* Item is first in cache. */  
+			{
+				if(sr->arp_cache->next)
+				{
+					sr->arp_cache=sr->arp_cache->next;
+					free(walker);
+					walker = sr->arp_cache;
+				}	
+				else
+				{
+					/*Getting a SEGFAULT*/
+					sr->arp_cache = NULL;
+					free(walker);
+					break;
+				}
+			}
+			else if(!walker->next) /* Item is last in cache. */
+			{
+				prev->next=NULL;
+				free(walker);
+				break;
+			}
+			else                    /* Item is in the middle of cache. */
+			{
+				prev->next=walker->next;
+				free(walker);
+				walker = prev->next;
+			}
+			
+		}
+		else
+		{
+			prev = walker;
+			walker = walker->next;
+		}
+    
+    }
+}
+
 /*******************************************************************
 *   Searches cache for entry based on IP address. Deletes any entries past expiration time. Returns 
 *   matching entry.
@@ -164,19 +217,39 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
      //fprintf(stderr, "trying to lock in search_cache\n");
     lock_cache(sr->arp_sub);
     // fprintf(stderr, "locked in search_cache\n");
+	
+	print_cache(sr);
+	check_cache_invalid(sr);
     
     unsigned char* mac=(unsigned char *)malloc(ETHER_ADDR_LEN);
     
 	struct arp_cache_entry* cache_walker=0;
-	struct arp_cache_entry* prev=0;
+	//struct arp_cache_entry* prev=0;
 	cache_walker=sr->arp_cache;
-	while(cache_walker) 
+	
+	while(cache_walker)
+	{
+		if(ip==cache_walker->ip_add)
+		{
+	
+			memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
+			unlock_cache(sr->arp_sub);
+			return mac;
+		}
+		else
+		{
+			//prev=cache_walker;
+			cache_walker = cache_walker->next;
+		}
+	}
+	
+	/*while(cache_walker) 
 	{
 	    time_t curr_time=time(NULL);
 	    assert(cache_walker);
 	    fprintf(stderr, "Cache Walker-> timenotvalid: %lu ", (unsigned long)cache_walker->timenotvalid);
 	    fprintf(stderr, "Curr Time: %lu \n", (unsigned long)curr_time);
-		if(cache_walker->timenotvalid > curr_time)  /*Check if entry has expired. */
+		if(cache_walker->timenotvalid > curr_time)  
 		{
 			if(ip==cache_walker->ip_add)
 			{
@@ -191,11 +264,12 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 			    cache_walker = cache_walker->next;
 			}
 		}
-		else                                        /*If the ARP entry has expired, delete. */
+		else                                        
 		{
+			fprintf(stderr, "Deleting from ARP cache\n");
 			cache_walker = delete_entry(sr, cache_walker, prev);
 		}
-	}
+	}*/
 	
 	/*IP Address is not in cache. */
 	unlock_cache(sr->arp_sub);
@@ -238,17 +312,7 @@ struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_en
         prev->next=walker->next;
         free(walker);
         return prev->next;
-    }
-	
-	/* Walker is still on item to be deleted so free that item. */
-	/*if(walker)
-		free(walker);
-		*/
-	/*Return next item in cache after deleted item. */
-	/*if(prev!=NULL)
-		return prev->next;
-	return NULL;*/
-	
+    }	
 }
 
 /*******************************************************************
