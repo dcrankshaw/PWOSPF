@@ -118,7 +118,8 @@ void check_top_invalid(struct sr_instance *sr)
 	struct adj_list *prev = NULL;
 	while(current)
 	{
-		if((current->rt->expired <= now) && (current->rt->rid != sr->ospf_subsys->this_router->rid))
+		/*if((current->rt->expired <= now) && (current->rt->rid != sr->ospf_subsys->this_router->rid))*/
+		if(1 == 0)
 		{
 			remove_from_topo(sr, current->rt);
 			if(prev == NULL)
@@ -617,7 +618,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 			memmove(opp_route, current, sizeof(struct route));
 			opp_route->r_id = host->rid;
 			add_new_route(sr, opp_route, new_adj);
-			free(opp_route);
+		//	free(opp_route);
 		}
 	}
 	

@@ -36,13 +36,12 @@ DONE?
 TODO:
 
 -conditional wait for LSU packets (so that we send packets every LSUINT seconds AND whenever we
- get a change to the link state update
+ get a change to the link state update- p_thread_cond_wait()
  	
--Finish resolving issues between what Adam's add and delete neighbor methods do and what
- mine do.
- -Test delete from topo and delete neighbor
+ -Test delete from topo
 -free all malloced members of structs in buffers
 -need a netmask config file
+-Find out about bug in sr_vns_comm.c
 
 -which route should follow for 0.0.0.0? vhost1's 0.0.0.0 entry is closest, but in 
     static routing table
@@ -50,6 +49,15 @@ TODO:
 -find out what entries need to be in static routing table. Rtable's must have at least 1 entry
  
 -probably some other stuff too
+
+Bugs that come up intermittently
+*** ARP bad access error when checking time--added printf statement::::TIME NEEDS TO USE localtime_r libraries to be threadsafe
+*** Mutex can't access error
+
+
+**Check top invalid made if statement of 1==0
+
+
 
 
 Notes:
@@ -59,9 +67,10 @@ our particular pieces of code, etc. Only delete things from your section.
 
 Dan:
 -print out initialized forwarding table to check
+-need to finish delete_from_top
 
 Maddie:
---TEST FORWARDING
+--TEST FORWARDING--Commented out right now.
 --Test ICMP Port Unreachable
 --Are ARP Replies correctly being added to cache
 --- We seem to be adding multiple requests for the same dest to arpq
@@ -69,6 +78,10 @@ Maddie:
 *****************************
 Neighbor_list is having issues - possibly when we delete from the neighbor list
 Search cache is having issues - possibly related to delete ARP entry
+=======
+
+Adam:
+
 
 ^Those two are modeled are done the same, could they both be wrong?
 We seem to have a non-null pointer pointing to inaccessible memory

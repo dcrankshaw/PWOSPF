@@ -84,23 +84,23 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 					struct neighbor_list* prev = NULL;
 					while(neighbor_list_walker != NULL)
 					{
-						if(neighbor_list_walker->timenotvalid < time(NULL))
-						{
-							neighbor_list_walker = delete_neighbor_list(iface, neighbor_list_walker, prev);
-						}
-						
-						fprintf(stderr, "Segfault in hello.c here\n");
-						assert(neighbor_list_walker);
-						assert(ip_hdr);
 						if(neighbor_list_walker->ip_address.s_addr == ip_hdr->ip_src.s_addr) /* ?????????? SHOULD THIS BE COMPARING THE rid, NOT THE ip_address? */
 						{
 							neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 							found = 1;
-							break;
+							prev=neighbor_list_walker;
+							neighbor_list_walker=neighbor_list_walker->next;
+						}
+						else if(neighbor_list_walker->timenotvalid < time(NULL))
+						{
+							neighbor_list_walker = delete_neighbor_list(iface, neighbor_list_walker, prev);
+						}
+						else
+						{
+						    prev = neighbor_list_walker;
+						    neighbor_list_walker = neighbor_list_walker->next;
 						}
 						
-						prev = neighbor_list_walker;
-						neighbor_list_walker = neighbor_list_walker->next;
 					}
 					/* no matching neighbor found - add new neighbor */
 					if(found == 0)
@@ -156,29 +156,37 @@ struct neighbor_list* delete_neighbor_list(struct pwospf_iflist* iface, struct n
 		if(iface->neighbors->next)
 		{
 			iface->neighbors = iface->neighbors->next;
+			free(walker);
+			return iface->neighbors;
 		}	
 		else
 		{
 			iface->neighbors = NULL;
+			free(walker);
+			return NULL;
 		}
 	}
 	else if(!walker->next) /* Item is last in list. */
 	{
 		prev->next = NULL;
+		free(walker);
+		return NULL;
 	}
 	else                    /* Item is in the middle of list. */
 	{
 		prev->next = walker->next;
+		free(walker);
+		return prev->next;
 	}
 	
 	/* Walker is still on item to be deleted so free that item. */
-	if(walker)
-		free(walker);
+/*	if(walker)
+		free(walker);*/
 		
 	/*Return next item in list after deleted item. */
-	if(prev != NULL)
+/*	if(prev != NULL)
 		return prev->next;
-	return NULL;
+	return NULL;*/
 }
 
 /*******************************************************************

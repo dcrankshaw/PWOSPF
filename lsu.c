@@ -91,7 +91,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     ps->packet-=sizeof(struct ospfv2_lsu_hdr);
     ps->packet-=sizeof(struct ospfv2_hdr);
     
-    forward_lsu(ps, ps->sr, ps->packet, pwospf, ip_hdr); /*ps->packet points to beginning of ip_hdr*/
+  //  forward_lsu(ps, ps->sr, ps->packet, pwospf, ip_hdr); /*ps->packet points to beginning of ip_hdr*/
     
     return 1;
   
@@ -243,6 +243,7 @@ void send_lsu(struct sr_instance* sr)
     {
         ip_hdr->ip_src=iface_walker->address;
         struct neighbor_list* neigh_walker=iface_walker->neighbors;
+        pack-=sizeof(struct sr_ethernet_hdr);
         while (neigh_walker)
         {
             /*Finish constructing IP Header */
@@ -252,8 +253,6 @@ void send_lsu(struct sr_instance* sr)
             ip_hdr->ip_sum=0;
             ip_hdr->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
             ip_hdr->ip_sum=htons(ip_hdr->ip_sum);
-
-            pack-=sizeof(struct sr_ethernet_hdr);
             
             /*Generate Ethernet Header*/
             struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)pack;
