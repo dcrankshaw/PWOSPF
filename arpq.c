@@ -85,6 +85,7 @@ struct arpq* get_entry(struct sr_instance *sr, struct in_addr next_hop)
 		{
 			return current;
 		}
+		current = current->next;
 	}
 	return NULL;
 }
@@ -171,6 +172,7 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 			walker = walker->next;
 		}
 		walker->next = entry;
+		entry->next=NULL;
 	}
 	return entry;
 }
