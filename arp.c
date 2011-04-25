@@ -105,7 +105,8 @@ uint8_t *got_Reply(struct packet_state * ps, struct sr_arphdr * arp)
 *******************************************************************/
 void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned char* mac)
 {
-	if(search_cache(ps->sr, ip)==NULL) /*Entry is not already in cache so add. */
+    unsigned char* mac=search_cache(ps->sr, ip);
+	if(mac==NULL) /*Entry is not already in cache so add. */
 	{
         lock_cache(ps->sr->arp_sub);
         struct arp_cache_entry* cache_walker=0;
@@ -150,7 +151,8 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
         }
         unlock_cache(ps->sr->arp_sub);
 	}
-
+    else
+        free(mac);
 }
 
 /*******************************************************************
@@ -195,6 +197,8 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	/*IP Address is not in cache. */
 	unlock_cache(sr->arp_sub);
 	// fprintf(stderr, "unlocked in search cache\n");
+	if(mac)
+	    free(mac);
 	return NULL;
 }
 

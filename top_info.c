@@ -605,6 +605,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 			memmove(opp_route, current, sizeof(struct route));
 			opp_route->r_id = host->rid;
 			add_new_route(sr, opp_route, new_adj);
+			free(opp_route);
 		}
 	}
 	

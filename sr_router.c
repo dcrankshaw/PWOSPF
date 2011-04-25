@@ -167,6 +167,8 @@ void sr_handlepacket(struct sr_instance* sr,
 					if(current.res_len >0)
 					    sr_send_packet(sr, head, current.res_len, interface);
 				}
+				else
+				    free(new_entry);
 			}
 			break;
 			default:

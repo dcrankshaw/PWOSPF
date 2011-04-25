@@ -112,6 +112,7 @@ void* arp_req_init(void* a)
 			send_all_lsus(args->entry->lsu_buf, mac, args->entry->iface_name, args->sr);
 			i = -1; /*to exit the loop*/
 			unlock_arp_q(args->sr->arp_sub);
+			free(mac);
 		}
 		else
 		{
