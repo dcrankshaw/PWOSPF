@@ -174,6 +174,8 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	{
 	    time_t curr_time=time(NULL);
 	    assert(cache_walker);
+	    fprintf(stderr, "Cache Walker-> timenotvalid: %lu ", (unsigned long)cache_walker->timenotvalid);
+	    fprintf(stderr, "Curr Time: %lu \n", (unsigned long)curr_time);
 		if(cache_walker->timenotvalid > curr_time)  /*Check if entry has expired. */
 		{
 			if(ip==cache_walker->ip_add)

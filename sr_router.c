@@ -141,7 +141,10 @@ void sr_handlepacket(struct sr_instance* sr,
     }
     else
     {
-		perm_eth = (struct sr_ethernet_hdr *)malloc(eth_offset);
+		if((perm_eth = (struct sr_ethernet_hdr *)malloc(eth_offset)) == 0)
+		{
+		    fprintf(stderr, "Malloc Error - Out of memory\n");
+		}
 		eth = (struct sr_ethernet_hdr *)packet;
 		memmove(perm_eth, eth, eth_offset);
 		leave_hdr_room(&current, eth_offset);
@@ -154,7 +157,19 @@ void sr_handlepacket(struct sr_instance* sr,
 				{
 					if(create_eth_hdr(head, &current, perm_eth) > 0)
 					{
-						sr_send_packet(sr, head, current.res_len, current.rt_entry->interface);
+						if(current.dyn_entry)
+						{
+						    sr_send_packet(sr, head, current.res_len, current.dyn_entry->interface);
+						}
+						else if(current.rt_entry)
+						{
+						    sr_send_packet(sr, head, current.res_len, current.rt_entry->interface);
+						}
+						else
+						{
+						    fprintf(stderr, "No matching route to send packet out to\n");
+						}
+						
 					}
 				}
 			}
@@ -167,8 +182,8 @@ void sr_handlepacket(struct sr_instance* sr,
 					if(current.res_len >0)
 					    sr_send_packet(sr, head, current.res_len, interface);
 				}
-				else
-				    free(new_entry);
+				/*else
+				    free(new_entry);*/
 			}
 			break;
 			default:
@@ -231,9 +246,13 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 		nhop = ps->dyn_entry->next_hop;
 		
 	}
-	else
+	else if(ps->rt_entry)
 	{
 		nhop = ps->rt_entry->gw;
+	}
+	else
+	{
+	    return 0;
 	}
 	
 	mac = search_cache(ps->sr, nhop.s_addr);
@@ -409,11 +428,16 @@ int handle_ip(struct packet_state *ps)
 		{
 			/*check if interface==eth0*/
 
-			
+			fprintf(stderr, "**************IP dest: %s******************\n", inet_ntoa(ip_hdr->ip_dst));
 			ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
 			if(ps->dyn_entry == NULL)
 			{
 				ps->rt_entry = get_static_routing_if(ps, ip_hdr->ip_dst);
+				if(ps->rt_entry == NULL)
+				{
+				    fprintf(stderr, "Nowhere to route packet to (no matching routing entry)\n");
+				    return 0;
+				}
 			}
 			if(is_external(ps->sr, ps->interface))
 			{
@@ -424,6 +448,7 @@ int handle_ip(struct packet_state *ps)
 				}
 				else
 				{
+					assert(ps->rt_entry);
 					temp_if = ps->rt_entry->interface;
 				}
 				if(is_internal(ps->sr, temp_if))
