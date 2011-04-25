@@ -81,6 +81,8 @@ struct arpq* get_entry(struct sr_instance *sr, struct in_addr next_hop)
 	struct arpq* current = sr->arp_sub->pending;
 	while(current)
 	{
+	    fprintf(stderr,"Pending IP: %s ", inet_ntoa(current->ip));
+	    fprintf(stderr, "Next Hop: %s \n", inet_ntoa(next_hop));
 		if(current->ip.s_addr == next_hop.s_addr)
 		{
 			return current;
@@ -162,10 +164,13 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 	
 	if(arp_sub->pending == NULL)
 	{
+		fprintf(stderr, "Pending is empty. Adding new entry. \n");
 		arp_sub->pending = entry;
+		entry->next=NULL;
 	}
 	else
 	{
+	    fprintf(stderr, "Pending is NOTTTT empty. Adding new entry. \n");
 		struct arpq* walker = arp_sub->pending;
 		while(walker->next)
 		{
