@@ -173,6 +173,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	while(cache_walker) 
 	{
 	    time_t curr_time=time(NULL);
+	    assert(cache_walker);
 		if(cache_walker->timenotvalid > curr_time)  /*Check if entry has expired. */
 		{
 			if(ip==cache_walker->ip_add)
@@ -212,29 +213,37 @@ struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_en
         if(sr->arp_cache->next)
         {
             sr->arp_cache=sr->arp_cache->next;
+            free(walker);
+            return sr->arp_cache;
         }	
         else
         {
             sr->arp_cache = NULL;
+            free(walker);
+            return NULL;
         }
     }
     else if(!walker->next) /* Item is last in cache. */
     {
         prev->next=NULL;
+        free(walker);
+        return NULL;
     }
     else                    /* Item is in the middle of cache. */
     {
         prev->next=walker->next;
+        free(walker);
+        return prev->next;
     }
 	
 	/* Walker is still on item to be deleted so free that item. */
-	if(walker)
+	/*if(walker)
 		free(walker);
-		
+		*/
 	/*Return next item in cache after deleted item. */
-	if(prev!=NULL)
+	/*if(prev!=NULL)
 		return prev->next;
-	return NULL;
+	return NULL;*/
 	
 }
 
