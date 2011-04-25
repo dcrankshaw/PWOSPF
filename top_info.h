@@ -40,5 +40,6 @@ struct route* router_contains_subnet(struct router* host, uint32_t prefix);
 void print_topo(struct sr_instance *sr);
 void print_rt(struct router* rt);
 struct pwospf_iflist* get_subnet_if(struct sr_instance *, struct route*);
+void print_ftable(struct sr_instance *);
 
 #endif

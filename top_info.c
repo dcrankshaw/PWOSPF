@@ -235,10 +235,18 @@ int remove_from_topo(struct sr_instance *sr, struct router *rt)
 	}
 	for(i = 0; i < rt->adj_size; i++)
 	{
+		
+		
 		remove_rt_sn_using_id(sr, rt->adjacencies[i], rt->rid);
+		/*set to null the pointer to us in all other routers adjacency lists*/
+		
 	}
 	free(rt->subnets);
+	
+	
+	
 	free(rt->adjacencies);
+	free(rt);
 	
 	
 	
@@ -344,11 +352,32 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 		adj_walker = adj_walker->next;
 	}
 	fprintf(stderr, "\n");
-	
+	fprintf(stderr, "Ftable BEFORE updating:\n");
+	print_ftable(sr);
 	update_ftable(sr);
+	fprintf(stderr, "Ftable AFTER updating:\n");
+	print_ftable(sr);
+	
 	pwospf_unlock(sr->ospf_subsys);
 	return 1;
 }
+
+void print_ftable(struct sr_instance *sr)
+{
+	struct ftable_entry* current = sr->ospf_subsys->fwrd_table;
+	fprintf(stderr, "--- FORWARDING TABLE ---\n");
+	while(current)
+	{
+		fprintf(stderr, "Prefix: %s   ", inet_ntoa(current->prefix));
+		fprintf(stderr, "Mask: %s   ", inet_ntoa(current->mask));
+		fprintf(stderr, "Next Hop: %s   ", inet_ntoa(current->next_hop));
+		fprintf(stderr, "Interface: %s\n", current->interface);
+		current = current->next;
+	}
+	fprintf(stderr, "\n");
+}
+
+
 
 /*NOT THREADSAFE*/
 struct router* adj_list_contains(struct sr_instance *sr, uint32_t id)
@@ -888,7 +917,7 @@ int reset_ftable(struct sr_instance *sr)
 /*NOT THREADSAFE*/
 void dijkstra(struct sr_instance* sr, struct router *host)
 {
-	fprintf(stderr, "Starting Dijkstra's\n");
+	//fprintf(stderr, "Starting Dijkstra's\n");
 	
 	struct adj_list *current = sr->ospf_subsys->network;
 	while(current != NULL)
@@ -903,14 +932,14 @@ void dijkstra(struct sr_instance* sr, struct router *host)
 	sr->ospf_subsys->this_router->dist = 0;
 	struct in_addr thisid;
 	thisid.s_addr = sr->ospf_subsys->this_router->rid;
-	fprintf(stderr, "This router: %s, ", inet_ntoa(thisid));
+	//fprintf(stderr, "This router: %s, ", inet_ntoa(thisid));
 	//sr->ospf_subsys->this_router->known = 1;
 	struct router* least_unknown = get_smallest_unknown(sr->ospf_subsys->network);
 	while(least_unknown != NULL)
 	{
 		struct in_addr lu_id;
 		lu_id.s_addr = least_unknown->rid;
-		fprintf(stderr, "Least unknown: %s, ", inet_ntoa(lu_id));
+		//fprintf(stderr, "Least unknown: %s, ", inet_ntoa(lu_id));
 		least_unknown->known = 1; /*mark it as visited*/
 		int i;
 		
@@ -920,24 +949,24 @@ void dijkstra(struct sr_instance* sr, struct router *host)
 			w = least_unknown->adjacencies[i];
 			struct in_addr w_id;
 			w_id.s_addr = w->rid;
-			fprintf(stderr, "Before while loop, w: %s\n", inet_ntoa(w_id));
+			//fprintf(stderr, "Before while loop, w: %s\n", inet_ntoa(w_id));
 			if(w->known == 0)
 			{
-				fprintf(stderr, "w->known == 0\n");
+				/*fprintf(stderr, "w->known == 0\n");
 				fprintf(stderr, "%d\n", least_unknown->dist + 1);
-				fprintf(stderr, "w->dist = %d\n", w->dist);
+				fprintf(stderr, "w->dist = %d\n", w->dist);*/
 				
 				
 				if(((least_unknown->dist + 1) < w->dist) || (w->dist < 0))
 				{
-					fprintf(stderr, "YAY, entered the right loop!!!!!!!!!!!!!!!!!!!!!!\n");
+					//fprintf(stderr, "YAY, entered the right loop!!!!!!!!!!!!!!!!!!!!!!\n");
 					w->dist = least_unknown->dist + 1; /* update the cost */
 					w->prev = least_unknown;
 					w_id.s_addr = w->rid;
-					fprintf(stderr, "w: %s, ", inet_ntoa(w_id));
+					//fprintf(stderr, "w: %s, ", inet_ntoa(w_id));
 					struct in_addr prev_id;
 					prev_id.s_addr = w->prev->rid;
-					fprintf(stderr, "prev: %s\n", inet_ntoa(prev_id));
+					//fprintf(stderr, "prev: %s\n", inet_ntoa(prev_id));
 				}
 			}
 		}
