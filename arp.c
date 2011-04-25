@@ -198,6 +198,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	/*IP Address is not in cache. */
 	unlock_cache(sr->arp_sub);
 	// fprintf(stderr, "unlocked in search cache\n");
+	/*This free is causing major issues, SEGFAULT*/
 	if(mac)
 	    free(mac);
 	return NULL;
@@ -218,6 +219,7 @@ struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_en
         }	
         else
         {
+            /*Getting a SEGFAULT*/
             sr->arp_cache = NULL;
             free(walker);
             return NULL;

@@ -320,6 +320,7 @@ int handle_ip(struct packet_state *ps)
 						{ 
 							if(ip_hdr->ip_p == IPPROTO_ICMP)
 							{
+								fprintf(stderr, "ICMP packet.\n");
 								if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
 								ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, 0, 0) == 0)
 								/*send 0 if it's an ICMP packet because they don't 
@@ -346,7 +347,7 @@ int handle_ip(struct packet_state *ps)
 
 							else if(ip_hdr->ip_p == OSPFV2_TYPE)
 							{
-							    fprintf(stderr, "OSPF packet1.\n");
+							    fprintf(stderr, "OSPF packet.\n");
 								handle_pwospf(ps, ip_hdr);
 								return 0; /* Tells handle_packet not to try to send packet*/
 
@@ -364,7 +365,7 @@ int handle_ip(struct packet_state *ps)
 					}
 					else if(ip_hdr->ip_p == OSPFV2_TYPE)
                     {
-                        fprintf(stderr, "OSPF packet2.\n");
+                        //fprintf(stderr, "OSPF packet.\n");
                         handle_pwospf(ps, ip_hdr);
                         return 0; /* Tells handle_packet not to try to send packet*/
 
@@ -392,7 +393,7 @@ int handle_ip(struct packet_state *ps)
 				}
 				else if(ip_hdr->ip_dst.s_addr== ntohl(OSPF_AllSPFRouters))
 				{
-                    fprintf(stderr, "OSPF packet3.\n");
+                    //fprintf(stderr, "OSPF packet.\n");
                     handle_pwospf(ps, ip_hdr);
                     return 0; /* Tells handle_packet not to try to send packet*/
 
@@ -432,15 +433,19 @@ int handle_ip(struct packet_state *ps)
 					/*need at least 4 bytes for the dest and source ports */
 					if(ip_hdr->ip_p == IPPROTO_ICMP)
 					{
+						
+						fprintf(stderr, "ICMP packet to forward\n");
 						if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
 							ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, 0, 0) == 0)
 							/*send 0 if it's an ICMP packet because they don't 
 							have port numbers */
 						{ return 0; }
 					}
-					else if(ip_hdr->ip_p == IPPROTO_TCP 
-						||ip_hdr->ip_p == IPPROTO_UDP)
+					else if((ip_hdr->ip_p == IPPROTO_TCP) 
+						||(ip_hdr->ip_p == IPPROTO_UDP))
 					{
+						
+						fprintf(stderr, "TCP or UDP packet to forward.\n");
 						if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 						{
 
@@ -464,7 +469,7 @@ int handle_ip(struct packet_state *ps)
 						}
 						else if(ip_hdr->ip_p == OSPFV2_TYPE)
 						{
-						    fprintf(stderr, "OSPF packet4.\n");
+						    //fprintf(stderr, "OSPF packet4.\n");
 							handle_pwospf(ps, ip_hdr);
 							return 0; /* Tells handle_packet not to try to send packet
 										This gets handled internally in the function*/
@@ -480,6 +485,7 @@ int handle_ip(struct packet_state *ps)
 			{
 				if(ip_hdr->ip_p == IPPROTO_ICMP)
 					{
+						fprintf(stderr, "ICMP packet from inside from an internal server\n");
 						if(!tell_valid(ps->sr, ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr,ip_hdr->ip_p, 0, 0))
 						{
 							return 0;
@@ -488,6 +494,8 @@ int handle_ip(struct packet_state *ps)
 					else if(ip_hdr->ip_p == IPPROTO_TCP 
 						|| ip_hdr->ip_p == IPPROTO_UDP)
 					{
+						fprintf(stderr, "TCP or UDP packet to forward from an internal server\n");
+
 						if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 						{
 

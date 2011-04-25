@@ -64,10 +64,15 @@ Maddie:
 --TEST FORWARDING
 --Test ICMP Port Unreachable
 --Are ARP Replies correctly being added to cache
+--- We seem to be adding multiple requests for the same dest to arpq
 
-Adam:
+*****************************
+Neighbor_list is having issues - possibly when we delete from the neighbor list
+Search cache is having issues - possibly related to delete ARP entry
 
-
+^Those two are modeled are done the same, could they both be wrong?
+We seem to have a non-null pointer pointing to inaccessible memory
+*****************************
 
 
 void add_to_existing_router(struct sr_instance *sr, struct route **routes, struct router* host, int num_ads)

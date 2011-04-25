@@ -145,6 +145,10 @@ void check_top_invalid(struct sr_instance *sr)
 			current = current->next;
 		}
 	}
+	
+	dijkstra(sr, sr->ospf_subsys->this_router);
+	update_ftable(sr);
+	
 	pwospf_unlock(sr->ospf_subsys);
 }
 
@@ -233,32 +237,38 @@ int remove_from_topo(struct sr_instance *sr, struct router *rt)
 	{
 		free(rt->subnets[i]);
 	}
+	
 	for(i = 0; i < rt->adj_size; i++)
 	{
-		
-		
+		/*Remove the connecting route from all other routers*/
 		remove_rt_sn_using_id(sr, rt->adjacencies[i], rt->rid);
-		/*set to null the pointer to us in all other routers adjacency lists*/
 		
+		/*set to null the pointer to us in all other routers adjacency lists*/
+		remove_rt_adj_using_id(sr, rt->adjacencies[i], rt->rid);
 	}
 	free(rt->subnets);
-	
-	
-	
 	free(rt->adjacencies);
 	free(rt);
-	
-	
-	
-	/*TODO TODO
-		look at all adjacencies, delete all pointers to this router, then free the router,
-		DON'T FORGET TO DELETE ROUTES FROM SUBNETS IN THE ROUTERS TOO*/	
-		 
-	dijkstra(sr, sr->ospf_subsys->this_router);     /*Doesn't lock in this function */
-	update_ftable(sr);                      /*Doesn't lock in this function */
 	return 1;
-	
 }
+
+void remove_rt_adj_using_id(struct sr_instance *sr, struct router* host, uint32_t id)
+{
+	int i;
+	for(i = 0; i < host->adj_size; i++)
+	{
+		/*If we found matching adjacency*/
+		if(host->adjacencies[i]->rid == id)
+		{
+			host->adjacencies[i] = NULL; /*make this pointer null in case it is the last item in the list*/
+			host->adjacencies[i] = host->adjacencies[host->adj_size - 1]; /*repack list (move last item to empty spot*/
+			host->adjacencies[host->adj_size - 1] = NULL; /*set last item NULL*/
+			host->adj_size--;
+			break; /*Done, so we don't need to keep stepping through*/
+		}
+	}
+}
+
 
 void print_topo(struct sr_instance *sr)
 {
@@ -648,11 +658,12 @@ struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 		{
 			prev->next = new_adj_entry;
 		}
-		new_router->adjacencies = (struct router **) malloc(INIT_ADJLIST_SIZE*sizeof(struct router*));
+		/*Initialize array of pointers to 0s*/
+		new_router->adjacencies = (struct router **) calloc(INIT_ADJLIST_SIZE, sizeof(struct router*));
 		new_router->adj_buf_size = INIT_ADJLIST_SIZE;
 		new_router->adj_size = 0;
 		
-		new_router->subnets = (struct route **) malloc(INIT_SUBNET_SIZE*sizeof(struct route*));
+		new_router->subnets = (struct route **) calloc(INIT_SUBNET_SIZE, sizeof(struct route*));
 		new_router->subnet_buf_size = INIT_SUBNET_SIZE;
 		new_router->subnet_size = 0;
 		

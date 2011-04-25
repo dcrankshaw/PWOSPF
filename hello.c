@@ -89,6 +89,9 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 							neighbor_list_walker = delete_neighbor_list(iface, neighbor_list_walker, prev);
 						}
 						
+						fprintf(stderr, "Segfault in hello.c here\n");
+						assert(neighbor_list_walker);
+						assert(ip_hdr);
 						if(neighbor_list_walker->ip_address.s_addr == ip_hdr->ip_src.s_addr) /* ?????????? SHOULD THIS BE COMPARING THE rid, NOT THE ip_address? */
 						{
 							neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
