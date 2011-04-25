@@ -346,6 +346,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
             if((ret = recv(sr->sockfd,((uint8_t*)&len) + bytes_read,
                             4 - bytes_read, 0)) == -1)
             {
+                
                 if ( errno == EINTR )
                 { continue; }
 
