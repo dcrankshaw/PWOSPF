@@ -348,6 +348,8 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 		{
 		    fprintf(stderr, "Prev ID: NULL\n");
 		}
+			fprintf(stderr, "Num Hops: %d\n", adj_walker->rt->dist);
+		
 		//fprintf(stderr, "\n");
 		adj_walker = adj_walker->next;
 	}
@@ -670,40 +672,44 @@ struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 }
 
 /*NOT THREADSAFE*/
-void get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrret,
+int get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrret,
 						struct sr_instance *sr, uint32_t id)
 {
-	ifret = NULL;	/*these are the corresponding iface and neighbor that the caller needs */
-	nbrret = NULL;
-	int done = 0;
+	struct in_addr nh;
+	nh.s_addr = id;
+	fprintf(stderr, "Next hop ID: %s\n", inet_ntoa(nh));
 	
 	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
+	while(cur_if)
+	{
+		fprintf(stderr, "Interface %s exists\n", cur_if->name);
+		cur_if = cur_if->next;
+	}
+	
+	cur_if = sr->ospf_subsys->interfaces;
 	while(cur_if)
 	{
 		struct neighbor_list *cur_nbr = cur_if->neighbors;
 		while(cur_nbr)
 		{
+			print_nbr_list(sr);
+			
 			if(cur_nbr->id == id)
 			{
-				ifret = cur_if;
-				nbrret = cur_nbr;
-				done = 1;
-				break;
+				fprintf(stderr, "FOUND!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+				
+				memmove(ifret, cur_if, sizeof(struct pwospf_iflist));
+				memmove(nbrret, cur_nbr, sizeof(struct neighbor_list));
+				return 1;
 			}
 			else
 			{
 				cur_nbr = cur_nbr->next;
 			}
 		}
-		if(done)
-		{
-			break;
-		}
-		else
-		{
 			cur_if = cur_if->next;
-		}
 	}
+	return 0;
 }
 
 
@@ -738,7 +744,7 @@ int update_ftable(struct sr_instance *sr)
 	{
 		int numhops = -1;
 		struct router* next_hop = find_next_hop(sr, current_dest_rt->rt, &numhops);
-		if(next_hop == NULL)
+		if(next_hop == NULL) /*Indicates current_dest_rt is this_router*/
 		{
 			if(numhops == 0)
 			{
@@ -754,10 +760,13 @@ int update_ftable(struct sr_instance *sr)
 					}
 					else
 					{
-						//assert(cur_ft_entry);
-						//cur_ft_entry->next = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
-						cur_ft_entry = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
-						//cur_ft_entry = cur_ft_entry->next;
+						cur_ft_entry = sr->ospf_subsys->fwrd_table;
+						while(cur_ft_entry->next)
+						{
+							cur_ft_entry = cur_ft_entry->next;
+						}
+						cur_ft_entry->next = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
+						cur_ft_entry = cur_ft_entry->next;
 					}
 					cur_ft_entry->prefix = sr->ospf_subsys->this_router->subnets[i]->prefix;
 					cur_ft_entry->mask = sr->ospf_subsys->this_router->subnets[i]->mask;
@@ -767,7 +776,6 @@ int update_ftable(struct sr_instance *sr)
 					struct pwospf_iflist* iface = get_subnet_if(sr, sr->ospf_subsys->this_router->subnets[i]);
 					assert(iface);
 					memmove(cur_ft_entry->interface, iface->name, sr_IFACE_NAMELEN);
-					cur_ft_entry = cur_ft_entry->next;
 				}
 				
 			}
@@ -779,15 +787,17 @@ int update_ftable(struct sr_instance *sr)
 		}
 		else
 		{
-			struct pwospf_iflist *iface = NULL;
-			struct neighbor_list *nbr = NULL;
 			
-			
+			struct pwospf_iflist *iface = (struct pwospf_iflist *)malloc(sizeof(struct pwospf_iflist));
+			struct neighbor_list *nbr = (struct neighbor_list *)malloc(sizeof(struct neighbor_list));
 			get_if_and_neighbor(iface, nbr, sr, next_hop->rid);
 			if(iface == NULL || nbr == NULL)
 			{
-				/*TODO: figure out if this is really an error. What if the neighbor list is NULL?*/
-				printf("Error? Or this may not be an error?");
+				
+				assert((iface || nbr));
+				assert(iface);
+				assert(nbr);
+				printf("Error - Next hop doesn't match any neighbors");
 				return 0;
 			}
 			int i;
@@ -803,28 +813,21 @@ int update_ftable(struct sr_instance *sr)
 					cur_entry->prefix = current_dest_rt->rt->subnets[i]->prefix;
 					cur_entry->mask = current_dest_rt->rt->subnets[i]->mask;
 					
-					if(numhops == 0)
-					{
-						fprintf(stderr, "1We shouldn't get here in update ftable\n");
-					}
-					else
-					{
-						cur_entry->next_hop.s_addr = nbr->ip_address.s_addr;
-					}
+					assert((numhops != 0));
+					cur_entry->next_hop.s_addr = nbr->ip_address.s_addr;
 					memmove(cur_entry->interface, iface->name, sr_IFACE_NAMELEN);
-					
-					
 					cur_entry->num_hops = numhops;
 					cur_entry->next = NULL;
 					
 					/*add to back of ftable*/
-					struct ftable_entry *walker = sr->ospf_subsys->fwrd_table;
-					if(walker == NULL)
+					
+					if(sr->ospf_subsys->fwrd_table == NULL)
 					{
 						sr->ospf_subsys->fwrd_table = cur_entry;
 					}
 					else
 					{
+						struct ftable_entry *walker = sr->ospf_subsys->fwrd_table;
 						while(walker->next)
 						{
 							walker = walker->next;
@@ -835,17 +838,21 @@ int update_ftable(struct sr_instance *sr)
 				else if(cur_entry->num_hops > numhops)
 				{
 					
-					if(numhops == 0)
-					{
-						fprintf(stderr, "2We shouldn't get here in update ftable\n");
-					}
-					else
-					{
-						cur_entry->next_hop.s_addr = nbr->ip_address.s_addr;
-					}
+					assert((numhops != 0));
+					cur_entry->next_hop.s_addr = nbr->ip_address.s_addr;
 					memmove(cur_entry->interface, iface->name, sr_IFACE_NAMELEN);
 					cur_entry->num_hops = numhops;
 				}
+			}
+			if(iface)
+			{
+				free(iface);
+				iface = NULL;
+			}
+			if(nbr)
+			{
+				free(nbr);
+				nbr = NULL;
 			}
 		}
 		current_dest_rt = current_dest_rt->next;
@@ -863,7 +870,7 @@ struct router* find_next_hop(struct sr_instance *sr, struct router *dest, int *h
 		*hops = 0;
 		return NULL;
 	}
-	
+	numhops = 1;
 	while((cur->prev != NULL) && (cur->prev->rid != sr->ospf_subsys->this_router->rid))
 	{
 		numhops++;
