@@ -24,7 +24,7 @@ int add_to_top(struct sr_instance*, uint32_t, struct route**, int);
 void add_to_existing_router(struct sr_instance *, struct route **, struct router*, int);
 void add_new_route(struct sr_instance *, struct route*, struct router*);
 struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid);
-void get_if_and_neighbor(struct pwospf_iflist *, struct neighbor_list *, struct sr_instance *, uint32_t);
+int get_if_and_neighbor(struct pwospf_iflist *, struct neighbor_list *, struct sr_instance *, uint32_t);
 int update_ftable(struct sr_instance *);
 struct router* find_next_hop(struct sr_instance *sr, struct router *dest, int *hops);
 struct ftable_entry *ftable_contains(struct sr_instance *, struct in_addr, struct in_addr);
