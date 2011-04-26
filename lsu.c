@@ -188,6 +188,7 @@ void send_lsu(struct sr_instance* sr)
     }
     struct ospfv2_lsu_adv* advertisements=(struct ospfv2_lsu_adv*)malloc
                     ((my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv)));
+    assert(advertisements);
     struct ospfv2_lsu_adv* advs=generate_adv(advertisements, sr, num_entries_rt);
     //print_ads(advs, my_router->subnet_size + num_entries_rt);
     struct ospfv2_lsu_adv* adv_walker=advs;
@@ -276,7 +277,7 @@ void send_lsu(struct sr_instance* sr)
     
     pwospf_unlock(sr->ospf_subsys);
     
-    free(advertisements);
+    free(advs);
     
     /** Won't let me free pack?!?!?!!?!*/
     

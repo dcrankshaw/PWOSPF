@@ -449,11 +449,7 @@ int handle_ip(struct packet_state *ps)
 			/*check if interface==eth0*/
 
 			fprintf(stderr, "**************IP dest: %s******************\n", inet_ntoa(ip_hdr->ip_dst));
-			if(ps->dyn_entry)
-			{
-				free(ps->dyn_entry);
-				ps->dyn_entry = NULL;
-			}
+			ps->dyn_enty = NULL;
 			ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
 			if(ps->dyn_entry == NULL)
 			{

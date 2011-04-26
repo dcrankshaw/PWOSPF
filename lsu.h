@@ -17,4 +17,4 @@ struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv*, struct sr_instance*,
 void forward_lsu(struct packet_state* ps, struct sr_instance* , uint8_t* , struct ospfv2_hdr*, struct ip* );
 void print_ads(struct ospfv2_lsu_adv* , int );
 
-#endif LSU_H
+#endif
