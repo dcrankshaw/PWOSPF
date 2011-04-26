@@ -100,6 +100,7 @@ void* arp_req_init(void* a)
 	unlock_arp_q(args->sr->arp_sub);
 	sleep(ARP_REQ_INTERVAL);
 	int i;
+    //i=6; /****************NEED TO DELETE THIS LINE*******************************************/
 	for(i = 1; i > 0 && i < MAX_ARP_REQUESTS; i++)
 	{
 		
