@@ -466,6 +466,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
             }
             fprintf(stderr, "-------------vsnhwinfo--------------\n\n");
             pwospf_init(sr);
+            fprintf(stderr, "______________________________________TEST__________________________\n");
             printf(" <-- Ready to process packets --> \n");
             break;
 

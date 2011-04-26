@@ -23,8 +23,8 @@
 #ifdef _DEBUG_
 #define Debug(x, args...) printf(x, ## args)
 #define DebugMAC(x) \
-  do { int ivyl; for(ivyl=0; ivyl<5; ivyl++) printf("%02x:", \
-  (unsigned char)(x[ivyl])); printf("%02x",(unsigned char)(x[5])); } while (0)
+  do { int ivyl; for(ivyl=0; ivyl<5; ivyl++) fprintf(stderr,"%02x:", \
+  (unsigned char)(x[ivyl])); fprintf(stderr,"%02x",(unsigned char)(x[5])); } while (0)
 #else
 #define Debug(x, args...) do{}while(0)
 #define DebugMAC(x) do{}while(0)
@@ -118,6 +118,7 @@ int create_eth_hdr(uint8_t *, struct packet_state *, struct sr_ethernet_hdr *);
 uint16_t cksum(uint8_t *, int);
 void handle_ospf(struct packet_state *, struct ip *);
 struct ftable_entry* get_dyn_routing_if(struct packet_state *, struct in_addr);
+void iface_init(struct sr_instance* );
 
 
 /* -- sr_if.c -- */
