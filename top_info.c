@@ -767,7 +767,7 @@ int update_ftable(struct sr_instance *sr)
 				{
 					if(sr->ospf_subsys->fwrd_table == 0)
 					{
-						sr->ospf_subsys->fwrd_table = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
+						sr->ospf_subsys->fwrd_table = (struct ftable_entry*)calloc(1, sizeof(struct ftable_entry));
 						cur_ft_entry = sr->ospf_subsys->fwrd_table;
 					}
 					else
@@ -777,7 +777,7 @@ int update_ftable(struct sr_instance *sr)
 						{
 							cur_ft_entry = cur_ft_entry->next;
 						}
-						cur_ft_entry->next = (struct ftable_entry*)malloc(sizeof(struct ftable_entry));
+						cur_ft_entry->next = (struct ftable_entry*)calloc(1, sizeof(struct ftable_entry));
 						cur_ft_entry = cur_ft_entry->next;
 					}
 					cur_ft_entry->prefix = sr->ospf_subsys->this_router->subnets[i]->prefix;
@@ -800,8 +800,8 @@ int update_ftable(struct sr_instance *sr)
 		else
 		{
 			
-			struct pwospf_iflist *iface = (struct pwospf_iflist *)malloc(sizeof(struct pwospf_iflist));
-			struct neighbor_list *nbr = (struct neighbor_list *)malloc(sizeof(struct neighbor_list));
+			struct pwospf_iflist *iface = (struct pwospf_iflist *)calloc(1, sizeof(struct pwospf_iflist));
+			struct neighbor_list *nbr = (struct neighbor_list *)calloc(1, sizeof(struct neighbor_list));
 			get_if_and_neighbor(iface, nbr, sr, next_hop->rid);
 			if(iface == NULL || nbr == NULL)
 			{
@@ -821,7 +821,7 @@ int update_ftable(struct sr_instance *sr)
 				if(cur_entry == NULL)
 				{
 					/*create entry*/
-					cur_entry = (struct ftable_entry *)malloc(sizeof(struct ftable_entry));
+					cur_entry = (struct ftable_entry *)calloc(1, sizeof(struct ftable_entry));
 					cur_entry->prefix = current_dest_rt->rt->subnets[i]->prefix;
 					cur_entry->mask = current_dest_rt->rt->subnets[i]->mask;
 					
@@ -845,6 +845,7 @@ int update_ftable(struct sr_instance *sr)
 							walker = walker->next;
 						}
 						walker->next = cur_entry;
+						cur_entry->next = NULL;
 					}
 				}
 				else if(cur_entry->num_hops > numhops)
