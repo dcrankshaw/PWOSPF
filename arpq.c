@@ -64,6 +64,16 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		{
 			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
 			fprintf(stderr, "2 - added to lsu buff\n");
+			
+			fprintf(stderr, "----Printing LSU Buffer----\n");
+            struct lsu_buf_ent* buf = entry->lsu_buf;
+            while(buf)
+            {
+                struct ip* ip_hdr = (struct ip*) (buf->lsu_packet + sizeof(struct sr_ethernet_hdr));
+                fprintf(stderr, "Dest IP: %s", inet_ntoa(ip_hdr->ip_dst));
+                fprintf(stderr, "\n");
+                buf = buf->next;
+            }
 		}
 		else
 		{
@@ -80,6 +90,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
         	assert(0);
     	}
 	}
+	
 	
 }
 
@@ -128,7 +139,7 @@ void* arp_req_init(void* a)
 		uint8_t* mac = search_cache(args->sr, temp); /*will be an array of 6 bytes*/
 		if(mac != NULL)
 		{
-		   fprintf(stderr, "ARP CACHE ENTRY FOUND!! SENDING ALL PACKS IN BUFF AND LSU_BUFF!!!\n");
+		   //fprintf(stderr, "ARP CACHE ENTRY FOUND!! SENDING ALL PACKS IN BUFF AND LSU_BUFF!!!\n");
 			lock_arp_q(args->sr->arp_sub);
 			send_all_packs(args->entry->pac_buf, mac, args->entry->iface_name, args->sr);
 			send_all_lsus(args->entry->lsu_buf, mac, args->entry->iface_name, args->sr);

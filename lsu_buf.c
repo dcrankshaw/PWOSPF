@@ -36,22 +36,16 @@
     }
     else
     {
-        buf_walker=buff;
-        while(buf_walker->next)
-        {
-            buf_walker=buf_walker->next;
-        }
-        buf_walker=buf_walker->next=(struct lsu_buf_ent*) malloc(sizeof(struct lsu_buf_ent));
-        buf_walker=buf_walker->next;
-        buf_walker->next=0;
         
+        /*add new entry to front of linked list*/
+        buf_walker=(struct lsu_buf_ent*) malloc(sizeof(struct lsu_buf_ent));
+        buf_walker->next=buff;
+        buff = buf_walker;
         buf_walker->lsu_packet=(uint8_t*)malloc(pack_len);
         memmove(buf_walker->lsu_packet, pack,pack_len);
         buf_walker->pack_len=pack_len;
-        
     }
     return buff;
- 
  }
  
  void send_all_lsus(struct lsu_buf_ent* buff, uint8_t* mac, char* iface, struct sr_instance* sr)
@@ -74,6 +68,7 @@
  
  void delete_all_lsu(struct lsu_buf_ent* buff)
  {
+    fprintf(stderr, "Deleting all LSU's in buffer.\n");
     struct lsu_buf_ent* prev=buff;
     while(buff)
     {
@@ -82,6 +77,7 @@
         free(prev->lsu_packet);
         free(prev);
     }
-    free(buff);
+    if(buff)
+        free(buff);
     buff=NULL;
  }
