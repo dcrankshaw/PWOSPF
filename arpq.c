@@ -63,6 +63,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		if(type == LSU)
 		{
 			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
+			
 			fprintf(stderr, "2 - added to lsu buff\n");
 		}
 		else
