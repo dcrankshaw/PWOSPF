@@ -33,7 +33,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		}
 		else
 		{
-			fprintf(stderr, "----Printing Packet Buffer----\n");
+			/*fprintf(stderr, "----Printing Packet Buffer----\n");
 			struct packet_buffer* buf = entry->pac_buf;
 			while(buf)
 			{
@@ -43,7 +43,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 				DebugMAC(buf->old_eth->ether_dhost);
 				fprintf(stderr, "\n");
 				buf = buf->next;
-			}
+			}*/
 			
 			
 			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
@@ -51,7 +51,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 			{
 				fprintf(stderr,"DIDN'T ADD AND SHOULD HAVE!!!\n");
 			}
-			fprintf(stderr, "1- added to packet buff\n");
+			//fprintf(stderr, "1- added to packet buff\n");
 		}
 
 	    unlock_arp_q(sr->arp_sub);
@@ -68,7 +68,7 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		else
 		{
 			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			fprintf(stderr, "2 - added to packet buff\n");
+			//fprintf(stderr, "2 - added to packet buff\n");
 		}
 		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
 		args->sr = sr;

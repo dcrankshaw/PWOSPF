@@ -156,8 +156,8 @@ void sr_handlepacket(struct sr_instance* sr,
 		memmove(perm_eth, eth, eth_offset);
 		leave_hdr_room(&current, eth_offset);
 		
-		fprintf(stderr, "\nIn handle packet--perm_eth--dhost: ");
-		DebugMAC(perm_eth->ether_dhost);
+		//fprintf(stderr, "\nIn handle packet--perm_eth--dhost: ");
+		//DebugMAC(perm_eth->ether_dhost);
 
 		switch(ntohs(eth->ether_type))
 		{
@@ -225,8 +225,8 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 {
 
 	/*check ARP cache to see if the MAC address for the outgoing IP address is there*/
-	fprintf(stderr, "\nIn Create_eth_hdr:::: eth_rec->ether_dhost: ");
-	DebugMAC(eth_rec->ether_dhost);
+	//fprintf(stderr, "\nIn Create_eth_hdr:::: eth_rec->ether_dhost: ");
+	//DebugMAC(eth_rec->ether_dhost);
 	
 	struct sr_if *sif = 0;
 	if(ps->forward)

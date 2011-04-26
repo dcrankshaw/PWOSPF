@@ -194,7 +194,6 @@ void* pwospf_run_thread(void* arg)
     	pwospf_unlock(sr->ospf_subsys);*/
     	send_lsu(sr);
         sleep(OSPF_DEFAULT_HELLOINT); /*****For debugging *****/
-        return NULL;
     };
 } /* -- run_ospf_thread -- */
 
