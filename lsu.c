@@ -91,7 +91,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     ps->packet-=sizeof(struct ospfv2_lsu_hdr);
     ps->packet-=sizeof(struct ospfv2_hdr);
     
-  //  forward_lsu(ps, ps->sr, ps->packet, pwospf, ip_hdr); /*ps->packet points to beginning of ip_hdr*/
+  forward_lsu(ps, ps->sr, ps->packet, pwospf, ip_hdr); /*ps->packet points to beginning of ip_hdr*/
     
     return 1;
   
@@ -99,51 +99,50 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
 
 void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet, struct ospfv2_hdr* pwospf_hdr, struct ip* ip_hdr)
 {
-    //fprintf(stderr, "IN FORWARD LSU!!\n");
+    fprintf(stderr, "IN FORWARD LSU!!\n");
     ip_hdr->ip_ttl--;
     if(ip_hdr->ip_ttl!=0)
     {
         struct in_addr prev_src=ip_hdr->ip_src;
-        //fprintf(stderr, "Locking in forward_lsu()\n");
         pwospf_lock(sr->ospf_subsys);
+        
+        struct sr_ethernet_hdr* new_eth=(struct sr_ethernet_hdr*)(packet);
+        struct ip* new_ip=(struct ip*)(packet+sizeof(struct sr_ethernet_hdr));
+        
         struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
+        packet-=sizeof(struct sr_ethernet_hdr);
         while(iface_walker)
         {
-           // fprintf(stderr, "a\n");
-            ip_hdr->ip_src=iface_walker->address;
+            new_ip->ip_src=iface_walker->address;
+
             struct neighbor_list* neigh_walker=iface_walker->neighbors;
             while (neigh_walker)
             {
-                //fprintf(stderr, "b\n");
                 if(neigh_walker->ip_address.s_addr==prev_src.s_addr)
                 {
                    // fprintf(stderr, "not forwarding lsu because neighbor is source.\n");
                     break;  /*Don't forward packet back to who we received lsu from */
                 }
-                ip_hdr->ip_dst=neigh_walker->ip_address;
-                ip_hdr->ip_sum=0;
-                ip_hdr->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
-                ip_hdr->ip_sum=htons(ip_hdr->ip_sum);
+                new_ip->ip_dst=neigh_walker->ip_address;
+                new_ip->ip_sum=0;
+                new_ip->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
+                new_ip->ip_sum=htons(ip_hdr->ip_sum);
                 
-                packet-=sizeof(struct ip);
-                memmove(packet, ip_hdr, sizeof(struct ip));
-                packet-=sizeof(struct sr_ethernet_hdr);
                 
                 /*Generate Ethernet Header*/
-                struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)packet;
-                eth_hdr->ether_type=htons(ETHERTYPE_IP);
+                new_eth->ether_type=htons(ETHERTYPE_IP);
                 
                 /*Find Interface to be sent out of's MAC Address*/
                 struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
-                memmove(eth_hdr->ether_shost, src_if->addr, ETHER_ADDR_LEN);
+                memmove(new_eth->ether_shost, src_if->addr, ETHER_ADDR_LEN);
                 
                 /*Find MAC Address of source*/
                 uint8_t *mac=search_cache(ps->sr, ip_hdr->ip_dst.s_addr);
                 if(mac!=NULL)
                 {
                     //fprintf(stderr, "c\n");
-                    memmove(eth_hdr->ether_dhost, mac, ETHER_ADDR_LEN);
-                    uint16_t packet_size=ntohs(ip_hdr->ip_len)+ sizeof(struct sr_ethernet_hdr);
+                    memmove(new_eth->ether_dhost, mac, ETHER_ADDR_LEN);
+                    uint16_t packet_size=ntohs((ip_hdr->ip_len)+ sizeof(struct sr_ethernet_hdr));
                     sr_send_packet(sr, packet, packet_size, iface_walker->name);
                     /*Packet has been sent*/
                 }
@@ -249,6 +248,8 @@ void send_lsu(struct sr_instance* sr)
             /*Finish constructing IP Header */
             //fprintf(stderr, "PREV SEGFAULT here:\n");
            /*Neigh_walker causing issues here -- Probably because delete from neighbor_list has problems*/
+            
+            assert(neigh_walker);
             ip_hdr->ip_dst=neigh_walker->ip_address;
             ip_hdr->ip_sum=0;
             ip_hdr->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
