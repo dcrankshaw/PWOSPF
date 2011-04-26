@@ -45,8 +45,6 @@ int pwospf_init(struct sr_instance* sr)
 	
     /* -- handle subsystem initialization here! -- */
 	
-	
-	
 	printf("about to create interfaces...\n");
 	create_pwospf_ifaces(sr);
 	printf("created interfaces\n");

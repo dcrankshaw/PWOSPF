@@ -38,8 +38,10 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 			while(buf)
 			{
 				struct ip* ip_hdr = (struct ip*) (buf->packet + sizeof(struct sr_ethernet_hdr));
-				fprintf(stderr, "Dest IP: %s\n", inet_ntoa(ip_hdr->ip_dst));
+				fprintf(stderr, "Dest IP: %s", inet_ntoa(ip_hdr->ip_dst));
+				fprintf(stderr, " Dest MAC: ");
 				DebugMAC(buf->old_eth->ether_dhost);
+				fprintf(stderr, "\n");
 				buf = buf->next;
 			}
 			
