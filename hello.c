@@ -64,16 +64,16 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				}
 
 				/* once interface is decided: */
-				struct neighbor_list* neighbor_list_walker = 0;
+				
 		
 				if(iface->neighbors == 0) /* no neighbors known - add new neighbor */
 				{
-					iface->neighbors = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
+					iface->neighbors = (struct neighbor_list*) calloc(1, sizeof(struct neighbor_list));
 					assert(iface->neighbors);
 					iface->neighbors->next = 0;
 					iface->neighbors->id = pwospf_hdr->rid;
-					struct in_addr rid;
-					rid.s_addr=pwospf_hdr->rid;
+					//struct in_addr rid;
+					//rid.s_addr=pwospf_hdr->rid;
 					//fprintf(stderr, "RID FROM HELLO: %s\n",inet_ntoa(rid));
 					iface->neighbors->ip_address = ip_hdr->ip_src;
 					iface->neighbors->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
@@ -81,6 +81,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 				}
 				else /* add to end of iface->neighbors (end of neighbor_list_walker) */
 				{
+					struct neighbor_list* neighbor_list_walker = 0;
 					neighbor_list_walker = iface->neighbors;
 					struct neighbor_list* prev = NULL;
 					while(neighbor_list_walker != NULL)
@@ -89,8 +90,9 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 						{
 							neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 							found = 1;
-							prev=neighbor_list_walker;
-							neighbor_list_walker=neighbor_list_walker->next;
+							//prev=neighbor_list_walker;
+							//neighbor_list_walker=neighbor_list_walker->next;
+							break;
 						}
 					/*	else if(neighbor_list_walker->timenotvalid < time(NULL))
 						{
@@ -107,9 +109,9 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 					/* no matching neighbor found - add new neighbor */
 					if(found == 0)
 					{
-                        neighbor_list_walker->next = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
-                        assert(neighbor_list_walker->next);
-                        neighbor_list_walker = neighbor_list_walker->next;
+                       	prev->next = (struct neighbor_list*) calloc(1, sizeof(struct neighbor_list));
+                        assert(prev->next);
+                        neighbor_list_walker = prev->next;
                         neighbor_list_walker->next = 0;
                         neighbor_list_walker->id = pwospf_hdr->rid;
                         neighbor_list_walker->ip_address = ip_hdr->ip_src;

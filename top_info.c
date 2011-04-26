@@ -116,12 +116,14 @@ void check_top_invalid(struct sr_instance *sr)
 	struct adj_list *current = sr->ospf_subsys->network;
 	time_t now = time(NULL);
 	struct adj_list *prev = NULL;
+	int changed = 0;
 	while(current)
 	{
 		/*if((current->rt->expired <= now) && (current->rt->rid != sr->ospf_subsys->this_router->rid))*/
 		if(1 == 0)
 		{
 			remove_from_topo(sr, current->rt);
+			changed = 1;
 			if(prev == NULL)
 			{
 				sr->ospf_subsys->network = current->next;
@@ -147,8 +149,12 @@ void check_top_invalid(struct sr_instance *sr)
 		}
 	}
 	
-	dijkstra(sr, sr->ospf_subsys->this_router);
-	update_ftable(sr);
+	
+	if(changed == 1)
+	{
+		dijkstra(sr, sr->ospf_subsys->this_router);
+		update_ftable(sr);
+	}
 	
 	pwospf_unlock(sr->ospf_subsys);
 }
@@ -749,13 +755,15 @@ struct pwospf_iflist* get_subnet_if(struct sr_instance *sr, struct route* subnet
 /*NOT THREADSAFE*/
 int update_ftable(struct sr_instance *sr)
 {
-	
 	reset_ftable(sr);
+	assert((!sr->ospf_subsys->fwrd_table));
 	struct adj_list *current_dest_rt = sr->ospf_subsys->network;
 	while(current_dest_rt)
 	{
 		int numhops = -1;
+		
 		struct router* next_hop = find_next_hop(sr, current_dest_rt->rt, &numhops);
+		
 		if(next_hop == NULL) /*Indicates current_dest_rt is this_router*/
 		{
 			if(numhops == 0)
@@ -765,6 +773,7 @@ int update_ftable(struct sr_instance *sr)
 				//fprintf(stderr, "Subnet Size: %d\n\n", sr->ospf_subsys->this_router->subnet_size);
 				for(i = 0; i < sr->ospf_subsys->this_router->subnet_size; i++)
 				{
+					int replaced = 0;
 					if(sr->ospf_subsys->fwrd_table == 0)
 					{
 						sr->ospf_subsys->fwrd_table = (struct ftable_entry*)calloc(1, sizeof(struct ftable_entry));
@@ -772,22 +781,43 @@ int update_ftable(struct sr_instance *sr)
 					}
 					else
 					{
-						cur_ft_entry = sr->ospf_subsys->fwrd_table;
-						while(cur_ft_entry->next)
+						struct ftable_entry *cur_entry = ftable_contains(sr, current_dest_rt->rt->subnets[i]->prefix,
+										current_dest_rt->rt->subnets[i]->mask);
+						if(cur_entry)
 						{
+							assert((numhops == 0));
+							cur_entry->next_hop.s_addr = sr->ospf_subsys->this_router->subnets[i]->next_hop.s_addr;
+							struct pwospf_iflist* iface = get_subnet_if(sr, sr->ospf_subsys->this_router->subnets[i]);
+							assert(iface);
+							memmove(cur_entry->interface, iface->name, sr_IFACE_NAMELEN);
+							cur_entry->num_hops = 0;
+							replaced = 1;
+							
+						}
+						else
+						{
+							cur_ft_entry = sr->ospf_subsys->fwrd_table;
+							while(cur_ft_entry->next)
+							{
+								cur_ft_entry = cur_ft_entry->next;
+							}
+							cur_ft_entry->next = (struct ftable_entry*)calloc(1, sizeof(struct ftable_entry));
 							cur_ft_entry = cur_ft_entry->next;
 						}
-						cur_ft_entry->next = (struct ftable_entry*)calloc(1, sizeof(struct ftable_entry));
-						cur_ft_entry = cur_ft_entry->next;
+						
+						
 					}
-					cur_ft_entry->prefix = sr->ospf_subsys->this_router->subnets[i]->prefix;
-					cur_ft_entry->mask = sr->ospf_subsys->this_router->subnets[i]->mask;
-					cur_ft_entry->next_hop = sr->ospf_subsys->this_router->subnets[i]->next_hop;
-					cur_ft_entry->num_hops = 0;
-					cur_ft_entry->next = 0;
-					struct pwospf_iflist* iface = get_subnet_if(sr, sr->ospf_subsys->this_router->subnets[i]);
-					assert(iface);
-					memmove(cur_ft_entry->interface, iface->name, sr_IFACE_NAMELEN);
+					if(!replaced)
+					{
+						cur_ft_entry->prefix = sr->ospf_subsys->this_router->subnets[i]->prefix;
+						cur_ft_entry->mask = sr->ospf_subsys->this_router->subnets[i]->mask;
+						cur_ft_entry->next_hop = sr->ospf_subsys->this_router->subnets[i]->next_hop;
+						cur_ft_entry->num_hops = 0;
+						cur_ft_entry->next = 0;
+						struct pwospf_iflist* iface = get_subnet_if(sr, sr->ospf_subsys->this_router->subnets[i]);
+						assert(iface);
+						memmove(cur_ft_entry->interface, iface->name, sr_IFACE_NAMELEN);
+					}
 				}
 				
 			}
@@ -934,7 +964,6 @@ void reset_ftable(struct sr_instance *sr)
 	}
 	sr->ospf_subsys->fwrd_table = NULL;
 }
-
 
 
 /*NOT THREADSAFE*/

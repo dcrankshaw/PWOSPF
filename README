@@ -35,29 +35,14 @@ DONE?
 
 TODO:
 
--conditional wait for LSU packets (so that we send packets every LSUINT seconds AND whenever we
- get a change to the link state update- p_thread_cond_wait()
+
  	
- -Test delete from topo
 -free all malloced members of structs in buffers
 -need a netmask config file
--Find out about bug in sr_vns_comm.c
-
--which route should follow for 0.0.0.0? vhost1's 0.0.0.0 entry is closest, but in 
-    static routing table
 
 -find out what entries need to be in static routing table. Rtable's must have at least 1 entry
  
 -probably some other stuff too
-
-Bugs that come up intermittently
-*** ARP bad access error when checking time--added printf statement::::TIME NEEDS TO USE localtime_r libraries to be threadsafe
-*** Mutex can't access error
-
-
-**Check top invalid made if statement of 1==0
-
-
 
 
 Notes:
@@ -66,9 +51,12 @@ This is so we each have a section of the README to pose questions to each other,
 our particular pieces of code, etc. Only delete things from your section.
 
 Dan:
--print out initialized forwarding table to check
--need to test delete_from_top
--Segfaults in reset ftable
+-Check_top_invalid for some reason is not working - gives us segfaults
+		***COMMENTED OUT RIGHT NOW***
+		**Check top invalid made if statement of 1==0
+-Create static routing tables for vhost 2 and 3 that will mirror entries in the dynamic routing table
+-conditional wait for LSU packets (so that we send packets every LSUINT seconds AND whenever we
+ get a change to the link state update- p_thread_cond_wait()
 
 Maddie:
 --TEST FORWARDING--Commented out right now.
@@ -76,35 +64,4 @@ Maddie:
 --Are ARP Replies correctly being added to cache
 --- We seem to be adding multiple requests for the same dest to arpq
 
-*****************************
-Neighbor_list is having issues - possibly when we delete from the neighbor list
-Search cache is having issues - possibly related to delete ARP entry
-=======
 
-Adam:
-
-
-^Those two are modeled are done the same, could they both be wrong?
-We seem to have a non-null pointer pointing to inaccessible memory
-*****************************
-
-
-void add_to_existing_router(struct sr_instance *sr, struct route **routes, struct router* host, int num_ads)
-{
-	/*TODO: this is pretty inefficient, it may be alright though if these stay small enough */
-	int i;
-	for(i = 0; i < num_ads; i++)
-	{
-		if(router_contains_subnet(routes[i], host) == 1)
-		{
-			if(router_contains(routes[i], host) == 0)
-			{
-				/*dont add connection, remove the existing connection in host*/
-			}
-		}
-		else
-		{
-			add_new_route(sr, routes[i], host);
-		}
-	}
-}
