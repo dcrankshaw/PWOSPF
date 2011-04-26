@@ -157,8 +157,6 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
         }
         unlock_cache(ps->sr->arp_sub);
 	}
-    else
-        free(mac_from_cache);
 }
 
 void check_cache_invalid(struct sr_instance* sr)

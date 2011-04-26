@@ -189,7 +189,11 @@ int route_cmp(struct route* r1, struct route* r2)
 int remove_from_topo(struct sr_instance *sr, struct router *rt)
 {
     /*LOCKED IN CHECK_TOP_INVALID*/
-    int i;
+   struct in_addr rid;
+   rid.s_addr = rt->rid;
+   fprintf(stderr, "Removing %s from topo\n", inet_ntoa(rid));
+   
+   int i;
 	/*free all allocated memory storing this router's routes*/
 	for(i = 0; i < rt->subnet_size; i++)
 	{

@@ -110,7 +110,6 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
         struct ip* new_ip=(struct ip*)(packet+sizeof(struct sr_ethernet_hdr));
         
         struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
-        packet-=sizeof(struct sr_ethernet_hdr);
         while(iface_walker)
         {
             new_ip->ip_src=iface_walker->address;
@@ -131,11 +130,11 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
 					new_eth->ether_type=htons(ETHERTYPE_IP);
 					
 					/*Find Interface to be sent out of's MAC Address*/
-					struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
-					memmove(new_eth->ether_shost, src_if->addr, ETHER_ADDR_LEN);
+					//struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
+					memmove(new_eth->ether_shost, iface_walker->mac, ETHER_ADDR_LEN);
 					
 					/*Find MAC Address of source*/
-					uint8_t *mac=search_cache(ps->sr, ip_hdr->ip_dst.s_addr);
+					uint8_t * mac=search_cache(ps->sr, ip_hdr->ip_dst.s_addr);
 					if(mac!=NULL)
 					{
 						//fprintf(stderr, "c\n");

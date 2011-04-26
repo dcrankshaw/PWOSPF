@@ -60,7 +60,6 @@ Dan:
 
 Maddie:
 --TEST FORWARDING--Commented out right now.
---Test ICMP Port Unreachable - PROBABLY NOT WORKING
 --Are ARP Replies correctly being added to cache
 --- We seem to be adding multiple requests for the same dest to arpq
 
