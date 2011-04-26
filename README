@@ -65,3 +65,13 @@ Maddie:
 --- We seem to be adding multiple requests for the same dest to arpq
 
 
+
+
+
+
+
+
+
+
+For the non-aligned pointer being freed error - Could we be freeing somethign that was never malloced????
+	do we malloc then memmove? do we need to?
