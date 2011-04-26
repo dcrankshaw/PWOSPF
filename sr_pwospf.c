@@ -116,10 +116,10 @@ int pwospf_init(struct sr_instance* sr)
 	print_topo(sr);
 
     /* -- start thread subsystem -- */
-    if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) {
+   /* if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) {
         perror("pthread_create");
         assert(0);
-    }
+    }*/
 
     return 0; /* success */
 } /* -- pwospf_init -- */
@@ -196,7 +196,7 @@ void* pwospf_run_thread(void* arg)
     	pwospf_unlock(sr->ospf_subsys);*/
     	send_lsu(sr);
         sleep(OSPF_DEFAULT_HELLOINT); /*****For debugging *****/
-        
+        return NULL;
     };
 } /* -- run_ospf_thread -- */
 

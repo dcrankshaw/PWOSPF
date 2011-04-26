@@ -96,6 +96,7 @@ void got_Request(struct packet_state * ps, struct sr_arphdr * arp_hdr, const str
 uint8_t *got_Reply(struct packet_state * ps, struct sr_arphdr * arp)
 {
 	add_cache_entry(ps, arp->ar_sip, arp->ar_sha); /*Add IP and MAC address from reply to cache */
+	
 	return search_cache(ps->sr, arp->ar_sip); /*Return the newly added entry. */	
 }
 

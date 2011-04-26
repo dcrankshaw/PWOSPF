@@ -9,6 +9,7 @@
 #include "lsu_buf.h"
 #include "buffer.h"
 #include "arp.h"
+#include "sr_router.h"
 
 #define LSU 1
 #define ARP_REQ_INTERVAL 5 /*seconds*/
@@ -27,13 +28,28 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		/*TODO: check if expired entry*/
 		if(type == LSU)
 		{
-			add_to_lsu_buff(entry->lsu_buf, packet, len);
-			//fprintf(stderr, "1- added to lsu buff\n");
+			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
+			fprintf(stderr, "1- added to lsu buff\n");
 		}
 		else
 		{
-			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			//fprintf(stderr, "1- added to packet buff\n");
+			fprintf(stderr, "----Printing Packet Buffer----\n");
+			struct packet_buffer* buf = entry->pac_buf;
+			while(buf)
+			{
+				struct ip* ip_hdr = (struct ip*) (buf->packet + sizeof(struct sr_ethernet_hdr));
+				fprintf(stderr, "Dest IP: %s\n", inet_ntoa(ip_hdr->ip_dst));
+				DebugMAC(buf->old_eth->ether_dhost);
+				buf = buf->next;
+			}
+			
+			
+			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
+			if(entry->pac_buf==NULL)
+			{
+				fprintf(stderr,"DIDN'T ADD AND SHOULD HAVE!!!\n");
+			}
+			fprintf(stderr, "1- added to packet buff\n");
 		}
 
 	    unlock_arp_q(sr->arp_sub);
@@ -44,13 +60,13 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		entry = create_entry(sr, sr->arp_sub, next_hop, iface);
 		if(type == LSU)
 		{
-			add_to_lsu_buff(entry->lsu_buf, packet, len);
-			//fprintf(stderr, "2 - added to lsu buff\n");
+			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
+			fprintf(stderr, "2 - added to lsu buff\n");
 		}
 		else
 		{
-			add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			//fprintf(stderr, "2 - added to packet buff\n");
+			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
+			fprintf(stderr, "2 - added to packet buff\n");
 		}
 		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
 		args->sr = sr;
@@ -96,12 +112,13 @@ void* arp_req_init(void* a)
 {
 	struct thread_args* args = (struct thread_args*) a;
 	lock_arp_q(args->sr->arp_sub);
-	sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
+	//sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
 	unlock_arp_q(args->sr->arp_sub);
 	sleep(ARP_REQ_INTERVAL);
 	int i;
     //i=6; /****************NEED TO DELETE THIS LINE*******************************************/
-	for(i = 1; i > 0 && i < MAX_ARP_REQUESTS; i++)
+	/*for(i = 1; i > 0 && i < MAX_ARP_REQUESTS; i++)*/
+	for(i = 1; i > 0 && i < 2; i++)
 	{
 		
 		lock_arp_q(args->sr->arp_sub);
@@ -110,7 +127,7 @@ void* arp_req_init(void* a)
 		uint8_t* mac = search_cache(args->sr, temp); /*will be an array of 6 bytes*/
 		if(mac != NULL)
 		{
-		   // fprintf(stderr, "ARP CACHE ENTRY FOUND!! SENDING ALL PACKS IN BUFF AND LSU_BUFF!!!\n");
+		   fprintf(stderr, "ARP CACHE ENTRY FOUND!! SENDING ALL PACKS IN BUFF AND LSU_BUFF!!!\n");
 			lock_arp_q(args->sr->arp_sub);
 			send_all_packs(args->entry->pac_buf, mac, args->entry->iface_name, args->sr);
 			send_all_lsus(args->entry->lsu_buf, mac, args->entry->iface_name, args->sr);
@@ -120,9 +137,9 @@ void* arp_req_init(void* a)
 		}
 		else
 		{
-		    //fprintf(stderr, "ARP CACHE ENTRY NOT FOUND!! Resending ARP Request Number %d!\n", i);
+		    fprintf(stderr, "ARP CACHE ENTRY NOT FOUND!! Resending ARP Request Number %d!\n", i);
 			lock_arp_q(args->sr->arp_sub);
-			sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
+			//sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
 			args->entry->num_requests++;
 			unlock_arp_q(args->sr->arp_sub);
 			sleep(ARP_REQ_INTERVAL);

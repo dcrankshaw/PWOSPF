@@ -163,6 +163,10 @@ void sr_handlepacket(struct sr_instance* sr,
 						{
 						    sr_send_packet(sr, head, current.res_len, current.rt_entry->interface);
 						}
+						else if(current.ok_to_send)
+						{
+							 sr_send_packet(sr, head, current.res_len, interface);
+						}
 						else
 						{
 						    fprintf(stderr, "No matching route to send packet out to\n");
@@ -265,6 +269,7 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 	}
 	else
 	{
+		assert(eth_rec);
 		get_mac_address(ps->sr, nhop, newpacket, ps->res_len, sif->name, 0, eth_rec);
 		return 0;
 	}
@@ -297,7 +302,8 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 int handle_ip(struct packet_state *ps)
 {
 	/*Load IP header*/
-
+	ps->ok_to_send = 0;
+	
 	if(ps->len < sizeof(struct ip))
 	{
 		printf("malformed IP packet");
@@ -406,6 +412,7 @@ int handle_ip(struct packet_state *ps)
 					iph->ip_sum = 0;
 					iph->ip_sum = cksum((uint8_t *)iph, sizeof(struct ip));
 					iph->ip_sum = htons(iph->ip_sum);
+					ps->ok_to_send = 1;
 					return 1;
 				}
 				else if(ip_hdr->ip_dst.s_addr== ntohl(OSPF_AllSPFRouters))
@@ -618,7 +625,10 @@ void update_ip_hdr(struct ip *ip_hdr)
 struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr ip_dst)
 {
 	
+	return NULL;
+	
 	struct ftable_entry* response= NULL;
+	
 	
 	/*LOCK MUTEX*/
 	pwospf_lock(ps->sr->ospf_subsys);

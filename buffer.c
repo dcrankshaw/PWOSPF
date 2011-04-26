@@ -111,10 +111,9 @@ struct packet_buffer * add_to_pack_buff(struct packet_buffer* buff, uint8_t* pac
 		buf_walker->pack_len=pack_len;
 		buf_walker->old_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 		memmove(buf_walker->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
-		return buf_walker;
 	}
 	/*Need to free pack and orig header??*/
-	return NULL;
+	return buff;
 }
 
 struct sr_if* get_if_from_mac(struct sr_instance* sr, unsigned char* mac)
@@ -122,18 +121,15 @@ struct sr_if* get_if_from_mac(struct sr_instance* sr, unsigned char* mac)
 	int len = ETHER_ADDR_LEN;
 	struct sr_if *current = sr->if_list;
 	int i;
-	int match = 0;
+	int match = 1;
 	while(current)
 	{
 		for(i = 0; i < len; i++)
 		{
 			if(current->addr[i] != mac[i])
 			{
+				match = 0;
 				break;
-			}
-			else
-			{
-				match = 1;
 			}
 		}
 		if(match == 1)
@@ -183,7 +179,7 @@ void delete_all_pack(struct packet_buffer* buff)
  /*TODO: need an ICMP Port Unreachable that doesn't use ps */
  void send_icmp(struct sr_instance *sr, uint8_t* packet, uint16_t old_len, struct sr_ethernet_hdr* old_eth)
  {
-    fprintf(stderr, "------Constructing LSU------\n");
+    fprintf(stderr, "------Constructing ICMP------\n");
     uint8_t* icmp_pac=(uint8_t*)malloc(sizeof(uint8_t));
     uint16_t icmp_pac_len=0;
     
@@ -209,12 +205,12 @@ void delete_all_pack(struct packet_buffer* buff)
    icmp_pac_len+=sizeof(struct icmp_hdr);
     if(data_len >= ICMP_DATA_RES)
     {
-        memmove(icmp_pac, packet, sizeof(struct ip)+ICMP_DATA_RES);
+        memmove((icmp_pac + sizeof(struct icmp_hdr)), packet, (sizeof(struct ip)+ICMP_DATA_RES));
         icmp_pac_len= icmp_pac_len+ sizeof(struct icmp_hdr) + ICMP_DATA_RES;
     }
     else
     {
-        memmove(icmp_pac, packet, sizeof(struct ip) + data_len);
+        memmove((icmp_pac + sizeof(struct icmp_hdr)), packet, sizeof(struct ip) + data_len);
         icmp_pac_len = icmp_pac_len+ sizeof(struct ip) + data_len;
     }
     
@@ -238,7 +234,7 @@ void delete_all_pack(struct packet_buffer* buff)
     new_ip->ip_src.s_addr = iface->ip;
     fprintf(stderr, "IP Source: %s \n", inet_ntoa(new_ip->ip_src)); 
     new_ip->ip_dst = old_ip->ip_src;
-    fprintf(stderr, "IP Dest: %s \n", inet_ntoa(new_ip->ip_src)); 
+    fprintf(stderr, "IP Dest: %s \n", inet_ntoa(new_ip->ip_dst)); 
     new_ip->ip_sum = 0;
     new_ip->ip_sum = cksum((uint8_t *)new_ip, sizeof(struct ip));
     new_ip->ip_sum = htons(new_ip->ip_sum);
@@ -247,11 +243,14 @@ void delete_all_pack(struct packet_buffer* buff)
     icmp_pac-=sizeof(struct sr_ethernet_hdr);
     struct sr_ethernet_hdr* eth_resp=(struct sr_ethernet_hdr*)icmp_pac;
     memmove(eth_resp->ether_dhost,old_eth->ether_shost,ETHER_ADDR_LEN);
+    assert(eth_resp->ether_dhost);
+    assert(eth_resp->ether_shost);
+    
     fprintf(stderr, "MAC Dest: ");
     DebugMAC(eth_resp->ether_dhost);
     memmove(eth_resp->ether_shost,iface->addr, ETHER_ADDR_LEN);
     fprintf(stderr, "MAC Source: ");
-    DebugMAC(eth_resp->ether_dhost);
+    DebugMAC(eth_resp->ether_shost);
     eth_resp->ether_type=htons(ETHERTYPE_IP);
     
     icmp_pac_len=icmp_pac_len+sizeof(struct sr_ethernet_hdr) + sizeof(struct ip);
@@ -261,16 +260,19 @@ void delete_all_pack(struct packet_buffer* buff)
  
  void send_all_icmps(struct packet_buffer* buff, struct sr_instance* sr)
  {
+    fprintf(stderr, "Trying to send ICMPS\n");
+    
     struct packet_buffer* prev=buff;
     while(buff)
     {
-        send_icmp(sr, buff->packet, buff->pack_len, buff->old_eth);
+       fprintf(stderr, "In while loop of send icmps\n");
+       
+       send_icmp(sr, buff->packet, buff->pack_len, buff->old_eth);
         prev=buff;
         buff=buff->next;
         free(prev->packet);
         free(prev->old_eth);
         free(prev);
     }
-    free(buff);
     buff=NULL;
  }

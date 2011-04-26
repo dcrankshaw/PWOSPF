@@ -33,7 +33,6 @@
         memmove(buff->lsu_packet,pack, pack_len);
         buff->pack_len=pack_len;
         buff->next=0;
-        return buff;
     }
     else
     {
@@ -50,8 +49,8 @@
         memmove(buf_walker->lsu_packet, pack,pack_len);
         buf_walker->pack_len=pack_len;
         
-		return buf_walker;
     }
+    return buff;
  
  }
  

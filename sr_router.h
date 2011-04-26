@@ -96,6 +96,7 @@ struct packet_state
 	struct sr_rt *rt_entry;
 	struct ftable_entry *dyn_entry;
 	short forward;			/* 1 if forwarding, 0 if return to sender */
+	int ok_to_send;
 };
 
 /* -- sr_main.c -- */
