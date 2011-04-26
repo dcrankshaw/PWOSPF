@@ -52,6 +52,12 @@ void sr_init(struct sr_instance* sr)
     /* REQUIRES */
     assert(sr);
 
+    
+   /* sr->ospf_subsys = (struct pwospf_subsys*)malloc(sizeof(struct pwospf_subsys));
+
+    assert(sr->ospf_subsys);
+    pthread_mutex_init(&(sr->ospf_subsys->lock), 0);*/
+    
     /* Add initialization code here! */
 	sr->flow_table = 0;
 	sr->rules = 0;
@@ -624,8 +630,6 @@ void update_ip_hdr(struct ip *ip_hdr)
 
 struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr ip_dst)
 {
-	
-	return NULL;
 	
 	struct ftable_entry* response= NULL;
 	

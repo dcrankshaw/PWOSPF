@@ -116,10 +116,10 @@ int pwospf_init(struct sr_instance* sr)
 	print_topo(sr);
 
     /* -- start thread subsystem -- */
-   /* if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) {
+    if( pthread_create(&sr->ospf_subsys->thread, 0, pwospf_run_thread, sr)) {
         perror("pthread_create");
         assert(0);
-    }*/
+    }
 
     return 0; /* success */
 } /* -- pwospf_init -- */
@@ -272,7 +272,9 @@ void create_pwospf_ifaces(struct sr_instance *sr)
 		memmove(cur_pw_if->name, cur_sr_if->name, sr_IFACE_NAMELEN);
 		memmove(cur_pw_if->mac, cur_sr_if->addr, 6);
 		cur_pw_if->helloint = OSPF_DEFAULT_HELLOINT;
-		cur_pw_if->neighbors = NULL;
+		cur_pw_if->neighbors = (struct neighbor_list**) malloc(DEF_NBR_BUF*sizeof(struct neighbor_list*));
+		cur_pw_if->nbr_size = 0;
+		cur_pw_if->nbr_buf_size = DEF_NBR_BUF;
 		cur_pw_if->next = NULL;
 		cur_sr_if = cur_sr_if->next;
 	}
@@ -286,7 +288,9 @@ void create_pwospf_ifaces(struct sr_instance *sr)
 		memmove(cur_pw_if->name, cur_sr_if->name, sr_IFACE_NAMELEN);
 		memmove(cur_pw_if->mac, cur_sr_if->addr, 6);
 		cur_pw_if->helloint = OSPF_DEFAULT_HELLOINT;
-		cur_pw_if->neighbors = NULL;
+		cur_pw_if->neighbors = (struct neighbor_list**) malloc(DEF_NBR_BUF*sizeof(struct neighbor_list*));
+		cur_pw_if->nbr_size = 0;
+		cur_pw_if->nbr_buf_size = DEF_NBR_BUF;
 		cur_pw_if->next = NULL;
 		cur_sr_if = cur_sr_if->next;
 	}

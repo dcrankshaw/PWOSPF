@@ -115,46 +115,48 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
         {
             new_ip->ip_src=iface_walker->address;
 
-            struct neighbor_list* neigh_walker=iface_walker->neighbors;
-            while (neigh_walker)
+            int i;
+            for(i = 0; i < iface_walker->nbr_size; i++)
             {
-                if(neigh_walker->ip_address.s_addr==prev_src.s_addr)
-                {
-                   // fprintf(stderr, "not forwarding lsu because neighbor is source.\n");
-                    break;  /*Don't forward packet back to who we received lsu from */
-                }
-                new_ip->ip_dst=neigh_walker->ip_address;
-                new_ip->ip_sum=0;
-                new_ip->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
-                new_ip->ip_sum=htons(ip_hdr->ip_sum);
-                
-                
-                /*Generate Ethernet Header*/
-                new_eth->ether_type=htons(ETHERTYPE_IP);
-                
-                /*Find Interface to be sent out of's MAC Address*/
-                struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
-                memmove(new_eth->ether_shost, src_if->addr, ETHER_ADDR_LEN);
-                
-                /*Find MAC Address of source*/
-                uint8_t *mac=search_cache(ps->sr, ip_hdr->ip_dst.s_addr);
-                if(mac!=NULL)
-                {
-                    //fprintf(stderr, "c\n");
-                    memmove(new_eth->ether_dhost, mac, ETHER_ADDR_LEN);
-                    uint16_t packet_size=ntohs((ip_hdr->ip_len)+ sizeof(struct sr_ethernet_hdr));
-                    sr_send_packet(sr, packet, packet_size, iface_walker->name);
-                    /*Packet has been sent*/
-                }
-                else
-                {
-                    //fprintf(stderr, "d\n");
-                    //fprintf(stderr, "About to get mac for forwarding\n");
-                    get_mac_address(sr, ip_hdr->ip_dst, packet, ps->len, iface_walker->name, 1, NULL);
-                    /**** NEED TO FREE ****/
-                }    
-                neigh_walker=neigh_walker->next;
+            	if(!(iface_walker->neighbors[i]->ip_address.s_addr ==prev_src.s_addr))
+            	{
+            	
+					new_ip->ip_dst=iface_walker->neighbors[i]->ip_address;
+					new_ip->ip_sum=0;
+					new_ip->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
+					new_ip->ip_sum=htons(ip_hdr->ip_sum);
+					
+					
+					/*Generate Ethernet Header*/
+					new_eth->ether_type=htons(ETHERTYPE_IP);
+					
+					/*Find Interface to be sent out of's MAC Address*/
+					struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
+					memmove(new_eth->ether_shost, src_if->addr, ETHER_ADDR_LEN);
+					
+					/*Find MAC Address of source*/
+					uint8_t *mac=search_cache(ps->sr, ip_hdr->ip_dst.s_addr);
+					if(mac!=NULL)
+					{
+						//fprintf(stderr, "c\n");
+						memmove(new_eth->ether_dhost, mac, ETHER_ADDR_LEN);
+						uint16_t packet_size=ntohs((ip_hdr->ip_len)+ sizeof(struct sr_ethernet_hdr));
+						sr_send_packet(sr, packet, packet_size, iface_walker->name);
+						/*Packet has been sent*/
+					}
+					else
+					{
+						//fprintf(stderr, "d\n");
+						//fprintf(stderr, "About to get mac for forwarding\n");
+						get_mac_address(sr, ip_hdr->ip_dst, packet, ps->len, iface_walker->name, 1, NULL);
+						/**** NEED TO FREE ****/
+					}    
+            	
+            	
+            	
+            	}
             }
+            
             iface_walker=iface_walker->next;
         }
         
@@ -238,19 +240,14 @@ void send_lsu(struct sr_instance* sr)
     uint16_t pack_len= sizeof(struct sr_ethernet_hdr) + ntohs(ip_hdr->ip_len);
     
     struct pwospf_iflist* iface_walker=sr->ospf_subsys->interfaces;
+    pack-=sizeof(struct sr_ethernet_hdr);
     while(iface_walker)
     {
         ip_hdr->ip_src=iface_walker->address;
-        struct neighbor_list* neigh_walker=iface_walker->neighbors;
-        pack-=sizeof(struct sr_ethernet_hdr);
-        while (neigh_walker)
-        {
-            /*Finish constructing IP Header */
-            //fprintf(stderr, "PREV SEGFAULT here:\n");
-           /*Neigh_walker causing issues here -- Probably because delete from neighbor_list has problems*/
-            
-            assert(neigh_walker);
-            ip_hdr->ip_dst=neigh_walker->ip_address;
+       int i;
+       for(i = 0; i < iface_walker->nbr_size; i++)
+       {
+       		ip_hdr->ip_dst=iface_walker->neighbors[i]->ip_address;
             ip_hdr->ip_sum=0;
             ip_hdr->ip_sum=cksum((uint8_t*)ip_hdr, sizeof(struct ip));
             ip_hdr->ip_sum=htons(ip_hdr->ip_sum);
@@ -274,9 +271,8 @@ void send_lsu(struct sr_instance* sr)
             {
                 get_mac_address(sr, ip_hdr->ip_dst, pack, pack_len, iface_walker->name, 1, NULL);
             }
-            neigh_walker=neigh_walker->next;
-        }
-        iface_walker=iface_walker->next;
+		}
+		iface_walker=iface_walker->next;
     } 
     
     pwospf_unlock(sr->ospf_subsys);

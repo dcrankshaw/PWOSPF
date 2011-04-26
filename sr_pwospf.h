@@ -21,6 +21,8 @@
 struct sr_instance;
 
 #define IF_MASK 0xfffffffe
+#define DEF_NBR_BUF	5 /*The default size to make the array of neighbor* structs*/
+
 
 
 struct route
@@ -81,7 +83,11 @@ struct pwospf_iflist
 	char name[sr_IFACE_NAMELEN];
 	uint16_t helloint;
 	unsigned char mac[ETHER_ADDR_LEN];
-	struct neighbor_list *neighbors;
+	struct neighbor_list **neighbors;
+	int nbr_size;
+	int nbr_buf_size;
+	
+	
 	struct pwospf_iflist *next;
 } __attribute__ ((packed));
 
@@ -91,7 +97,7 @@ struct neighbor_list
 	struct in_addr ip_address;
 	/*time time*/
 	time_t timenotvalid;                /*The time when this entry is no longer valid*/
-	struct neighbor_list *next;
+	//struct neighbor_list *next;
 } __attribute__ ((packed));
 
 struct pwospf_subsys

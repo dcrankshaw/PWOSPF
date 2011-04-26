@@ -23,8 +23,8 @@
 #ifdef _DEBUG_
 #define Debug(x, args...) printf(x, ## args)
 #define DebugMAC(x) \
-  do { int ivyl; for(ivyl=0; ivyl<5; ivyl++) printf("%02x:", \
-  (unsigned char)(x[ivyl])); printf("%02x",(unsigned char)(x[5])); } while (0)
+  do { int ivyl; for(ivyl=0; ivyl<5; ivyl++) fprintf(stderr, "%02x:", \
+  (unsigned char)(x[ivyl])); fprintf(stderr, "%02x",(unsigned char)(x[5])); } while (0)
 #else
 #define Debug(x, args...) do{}while(0)
 #define DebugMAC(x) do{}while(0)

@@ -112,13 +112,12 @@ void* arp_req_init(void* a)
 {
 	struct thread_args* args = (struct thread_args*) a;
 	lock_arp_q(args->sr->arp_sub);
-	//sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
+	sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
 	unlock_arp_q(args->sr->arp_sub);
 	sleep(ARP_REQ_INTERVAL);
 	int i;
     //i=6; /****************NEED TO DELETE THIS LINE*******************************************/
-	/*for(i = 1; i > 0 && i < MAX_ARP_REQUESTS; i++)*/
-	for(i = 1; i > 0 && i < 2; i++)
+	for(i = 1; i > 0 && i < MAX_ARP_REQUESTS; i++)
 	{
 		
 		lock_arp_q(args->sr->arp_sub);
@@ -139,7 +138,7 @@ void* arp_req_init(void* a)
 		{
 		    fprintf(stderr, "ARP CACHE ENTRY NOT FOUND!! Resending ARP Request Number %d!\n", i);
 			lock_arp_q(args->sr->arp_sub);
-			//sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
+			sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
 			args->entry->num_requests++;
 			unlock_arp_q(args->sr->arp_sub);
 			sleep(ARP_REQ_INTERVAL);

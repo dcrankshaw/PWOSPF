@@ -14,12 +14,9 @@ void check_top_invalid(struct sr_instance *);
 /*removes from the given router's subnet list and adjacency list*/
 int remove_subnet_from_router(struct sr_instance *, struct router *, struct route *);
 int route_cmp(struct route*, struct route*);
-/*TODO*/
 int remove_from_topo(struct sr_instance *, struct router *);
 int router_contains(struct route*, struct router*);
 /* called when LSU packets are received. Adds to the adjacency list */
-/*TODO: What if we get an LSU that advertises a link connecting to a router we don't
-know about?*/
 int add_to_top(struct sr_instance*, uint32_t, struct route**, int);
 void add_to_existing_router(struct sr_instance *, struct route **, struct router*, int);
 void add_new_route(struct sr_instance *, struct route*, struct router*);
@@ -32,9 +29,6 @@ void reset_ftable(struct sr_instance *);
 void dijkstra(struct sr_instance*, struct router *);
 struct router* get_smallest_unknown(struct adj_list *);
 struct router* adj_list_contains(struct sr_instance *, uint32_t);
-void print_nbr_list(struct sr_instance *sr);
-void add_neighbor(struct sr_instance*, char *, uint32_t, struct in_addr);
-void print_nbr(struct neighbor_list* nbr);
 void print_subs(struct route** , int );
 struct route* router_contains_subnet(struct router* host, uint32_t prefix);
 void print_topo(struct sr_instance *sr);
@@ -42,5 +36,7 @@ void print_rt(struct router* rt);
 struct pwospf_iflist* get_subnet_if(struct sr_instance *, struct route*);
 void print_ftable(struct sr_instance *);
 void remove_rt_adj_using_id(struct sr_instance *, struct router*, uint32_t);
+void print_nbr_list(struct sr_instance *);
+void print_nbr(struct neighbor_list*);
 
 #endif

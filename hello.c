@@ -51,7 +51,9 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		int found = 0;
 		while(iface)
 		{
-		    delete_neighbor_list(iface);
+			
+			
+			
 			if(strcmp(iface->name, ps->interface) == 0) /* if the current interface equals the incoming interface */
 			{
 				
@@ -65,61 +67,47 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 
 				/* once interface is decided: */
 				
-		
-				if(iface->neighbors == 0) /* no neighbors known - add new neighbor */
+				assert((iface->nbr_buf_size > 0));
+				if(iface->nbr_buf_size <= iface->nbr_size)
 				{
-					iface->neighbors = (struct neighbor_list*) calloc(1, sizeof(struct neighbor_list));
-					assert(iface->neighbors);
-					iface->neighbors->next = 0;
-					iface->neighbors->id = pwospf_hdr->rid;
-					//struct in_addr rid;
-					//rid.s_addr=pwospf_hdr->rid;
-					//fprintf(stderr, "RID FROM HELLO: %s\n",inet_ntoa(rid));
-					iface->neighbors->ip_address = ip_hdr->ip_src;
-					iface->neighbors->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
-					found = 1;
+					/*Need to resize array*/
+					struct neighbor_list** temp = realloc(iface->neighbors, 2*iface->nbr_buf_size);
+					assert(temp); /*Will fail if realloc fails*/
+					iface->neighbors = temp;
+					iface->nbr_buf_size *= 2;
 				}
-				else /* add to end of iface->neighbors (end of neighbor_list_walker) */
+				
+				int i;
+				for(i = 0; i < iface->nbr_size; i++)
 				{
-					struct neighbor_list* neighbor_list_walker = 0;
-					neighbor_list_walker = iface->neighbors;
-					struct neighbor_list* prev = NULL;
-					while(neighbor_list_walker != NULL)
+					if(iface->neighbors[i]->ip_address.s_addr == ip_hdr->ip_src.s_addr)
 					{
-						if(neighbor_list_walker->ip_address.s_addr == ip_hdr->ip_src.s_addr) /* ?????????? SHOULD THIS BE COMPARING THE rid, NOT THE ip_address? */
-						{
-							neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
-							found = 1;
-							//prev=neighbor_list_walker;
-							//neighbor_list_walker=neighbor_list_walker->next;
-							break;
-						}
-					/*	else if(neighbor_list_walker->timenotvalid < time(NULL))
-						{
-							neighbor_list_walker = delete_neighbor_list(iface, neighbor_list_walker, prev);
-						   
-						}*/
-						else
-						{
-						    prev = neighbor_list_walker;
-						    neighbor_list_walker = neighbor_list_walker->next;
-						}
+						iface->neighbors[i]->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
+						found = 1;
+					}
+					else if(iface->neighbors[i]->timenotvalid < time(NULL))
+					{
+						free(iface->neighbors[i]);
+						iface->neighbors[i] = NULL;
+						iface->neighbors[i] = iface->neighbors[iface->nbr_size - 1];
+						iface->neighbors[iface->nbr_size] = NULL;
+						iface->nbr_size--;
+						i--; /*we have to recheck the new element we placed in the deleted elements spot*/
+								/*we will still exit the for loop though if the deleted element was the last one*/
 						
 					}
-					/* no matching neighbor found - add new neighbor */
-					if(found == 0)
-					{
-                       	prev->next = (struct neighbor_list*) calloc(1, sizeof(struct neighbor_list));
-                        assert(prev->next);
-                        neighbor_list_walker = prev->next;
-                        neighbor_list_walker->next = 0;
-                        neighbor_list_walker->id = pwospf_hdr->rid;
-                        neighbor_list_walker->ip_address = ip_hdr->ip_src;
-                        neighbor_list_walker->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
-                        found = 1;
-				    }
+					
 				}
-				/*add to list of subnets*/
+				if(!found)
+				{
+				
+					iface->neighbors[iface->nbr_size] = (struct neighbor_list*) calloc(1, sizeof(struct neighbor_list));
+					iface->neighbors[iface->nbr_size]->id = pwospf_hdr->rid;
+					iface->neighbors[iface->nbr_size]->ip_address = ip_hdr->ip_src;
+					iface->neighbors[iface->nbr_size]->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
+					iface->nbr_size++;
+				}
+				
 				
 				struct in_addr new_pref;
 				new_pref.s_addr = (ip_hdr->ip_src.s_addr & htonl(hello_hdr->nmask));
@@ -149,94 +137,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 	return;
 }
 
-/*******************************************************************
-*   Deletes a neigbor_list_entry from neighbors.
-*******************************************************************/
-void delete_neighbor_list(struct pwospf_iflist* iface)
-{
-    struct neighbor_list* walker = iface->neighbors;
-    struct neighbor_list* prev = NULL;
-    time_t curr_time;
-    while(walker)
-    {
-        curr_time=time(NULL);
-    	if(walker->timenotvalid < curr_time)
-    	{
-			if(prev==0)         /* Item is first in cache. */  
-			{
-				if(iface->neighbors->next)
-				{
-					iface->neighbors=iface->neighbors->next;
-					free(walker);
-					walker = iface->neighbors;
-				}	
-				else
-				{
-					/*Getting a SEGFAULT*/
-					iface->neighbors = NULL;
-					free(walker);
-					break;
-				}
-			}
-			else if(!walker->next) /* Item is last in cache. */
-			{
-				prev->next=NULL;
-				free(walker);
-				break;
-			}
-			else                    /* Item is in the middle of cache. */
-			{
-				prev->next=walker->next;
-				free(walker);
-				walker = prev->next;
-			}
-			
-		}
-		else
-		{
-			prev = walker;
-			walker = walker->next;
-		}
-    
-    }
-	/*	
-	if(prev == 0)          
-	{
-		if(iface->neighbors->next)
-		{
-			iface->neighbors = iface->neighbors->next;
-			free(walker);
-			return iface->neighbors;
-		}	
-		else
-		{
-			iface->neighbors = NULL;
-			free(walker);
-			return NULL;
-		}
-	}
-	else if(!walker->next) 
-	{
-		prev->next = NULL;
-		free(walker);
-		return NULL;
-	}
-	else                    
-	{
-		prev->next = walker->next;
-		free(walker);
-		return prev->next;
-	}
-	*/
-	/* Walker is still on item to be deleted so free that item. */
-/*	if(walker)
-		free(walker);*/
-		
-	/*Return next item in list after deleted item. */
-/*	if(prev != NULL)
-		return prev->next;
-	return NULL;*/
-}
 
 /*******************************************************************
 *   Prints all of the Neighbor Lists for all Interfaces.
@@ -256,17 +156,15 @@ void print_all_neighbor_lists(struct packet_state* ps)
 	{
 		printf("Interface IP: %i", interface_list_walker->address.s_addr); /* OLD: inet_ntoa(interface_list_walker->ip_add) */
 		printf("--- NEIGHBOR LIST ---\n");
-		struct neighbor_list* neighbor_list_walker = 0;
-		if(interface_list_walker->neighbors == 0)
+		int i;
+		if(interface_list_walker->nbr_size == 0)
 		{
 			printf("NEIGHBOR LIST IS EMPTY\n");
 			return;
 		}
-		neighbor_list_walker = interface_list_walker->neighbors; /* WHY DOES THIS GENERATE A WARNING?? */
-		while(neighbor_list_walker)
+		for(i = 0; i < interface_list_walker->nbr_size; i++)
 		{
-			print_neighbor_list(neighbor_list_walker);
-			neighbor_list_walker = neighbor_list_walker->next;
+			print_neighbor_list(interface_list_walker->neighbors[i]);
 		}
 		interface_list_walker = interface_list_walker->next;
 	}

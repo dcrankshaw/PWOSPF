@@ -17,95 +17,33 @@
 #include "top_info.h"
 #include "pwospf_protocol.h"
 
-/*NOT THREADSAFE*/
 void print_nbr_list(struct sr_instance *sr)
 {
 	struct pwospf_iflist* iface = sr->ospf_subsys->interfaces;
-	fprintf(stderr, "PRINTING NEIGHBOR LIST:\n");
+	int i;
+	fprintf(stderr, "---NEIGHBOR LIST---\n");
+	
 	while(iface)
 	{
-		fprintf(stderr, "interface %s\n", iface->name);
-		struct neighbor_list* nbr = iface->neighbors;
-		while(nbr)
+		fprintf(stderr, "%s: ", iface->name);
+		for(i = 0; i < iface->nbr_size; i++)
 		{
-			print_nbr(nbr);
-			nbr = nbr->next;
+			print_nbr(iface->neighbors[i]);
 		}
 		fprintf(stderr, "\n");
 		iface = iface->next;
 	}
-	fprintf(stderr, "\n");
+
 }
 
-/*THREADSAFE*/
 void print_nbr(struct neighbor_list* nbr)
 {
-    struct in_addr rid;
-    rid.s_addr=nbr->id;
-	fprintf(stderr, "ID: %s\n", inet_ntoa(rid));
+	struct in_addr rid;
+	rid.s_addr = nbr->id;
+	fprintf(stderr, "%s,  ", inet_ntoa(rid));
 }
 
-/*NOT THREADSAFE*/
-/* This method is never used ---> Can be deleted */
-void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct in_addr ip)
-{
-	struct pwospf_iflist *current_if = sr->ospf_subsys->interfaces;
-	while(current_if)
-	{
-		if(strcmp(name, current_if->name) != 0)
-		{
-			current_if = current_if->next;
-		}
-		else
-		{
-			struct neighbor_list *current_nbr = current_if->neighbors;
-			if(current_nbr == NULL)
-			{
-				current_if->neighbors = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
-				current_if->neighbors->id = router_id;
-				current_if->neighbors->ip_address = ip;
-				current_if->neighbors->next = NULL;
-				
-			}
-			else
-			{
-				while(current_nbr->next != NULL)
-				{
-					/*neighbor already part of list*/
-					if(current_nbr->id == router_id)
-					{
-						break;
-					}
-					else
-					{
-						current_nbr = current_nbr->next;
-					}
-				}
-				if(current_nbr->id == router_id)
-				{
-					break;
-				}
-				else
-				{
-					current_nbr->next = (struct neighbor_list*) malloc(sizeof(struct neighbor_list));
-					current_nbr = current_nbr->next;
-					current_nbr->id = router_id;
-					current_nbr->ip_address = ip;
-					current_nbr->next = NULL;
-				}
-			}
-				
-			break;
-		}
-	}
-	
-	/*Also need to add support to add neighbors to sr->ospf_subsys->this_router->subnets
-		can match based on incoming mask, prefix (from ip&mask), then check if the matching
-		subnet rid == 0. If it is, update it to router_id. Else add a new entry to subnets with
-		the found mask, prefix, but with router_id (indicates two routers on same subnet
-		with switch).*/
 
-}
 
 /*this get's called from the OSPF_SUBSYSTEM thread*/
 void check_top_invalid(struct sr_instance *sr)
@@ -403,7 +341,7 @@ void print_ftable(struct sr_instance *sr)
 	fprintf(stderr, "--- FORWARDING TABLE ---\n");
 	while(current)
 	{
-		fprintf(stderr, "%x --->", current);
+		fprintf(stderr, "%x --->", (int) current);
 		fprintf(stderr, "Prefix: %s   ", inet_ntoa(current->prefix));
 		fprintf(stderr, "Mask: %s   ", inet_ntoa(current->mask));
 		fprintf(stderr, "Next Hop: %s   ", inet_ntoa(current->next_hop));
@@ -482,7 +420,9 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 	/*Need to resize subnet buffer*/
 	if(host->subnet_buf_size == host->subnet_size)
 	{
-		host->subnets = realloc(host->subnets, 2*host->subnet_buf_size); //double size of array
+		struct route** temp = realloc(host->subnets, 2*host->subnet_buf_size);
+		assert(temp);
+		host->subnets = temp; //double size of array
 		host->subnet_buf_size *= 2;
 	}
 	
@@ -715,33 +655,27 @@ int get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrre
 	//fprintf(stderr, "Next hop ID: %s\n", inet_ntoa(nh));
 	
 	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
-	while(cur_if)
+	/*while(cur_if)
 	{
-		//fprintf(stderr, "Interface %s exists\n", cur_if->name);
+		fprintf(stderr, "Interface %s exists\n", cur_if->name);
 		cur_if = cur_if->next;
 	}
-	
-	cur_if = sr->ospf_subsys->interfaces;
+	cur_if = sr->ospf_subsys->interfaces;*/
 	while(cur_if)
 	{
-		struct neighbor_list *cur_nbr = cur_if->neighbors;
-		while(cur_nbr)
+		//struct neighbor_list *cur_nbr = cur_if->neighbors;
+		int i;
+		for(i = 0; i < cur_if->nbr_size; i++)
 		{
-			print_nbr_list(sr);
-			
-			if(cur_nbr->id == id)
+			if(cur_if->neighbors[i]->id == id)
 			{
-				
 				memmove(ifret, cur_if, sizeof(struct pwospf_iflist));
-				memmove(nbrret, cur_nbr, sizeof(struct neighbor_list));
+				memmove(nbrret, cur_if->neighbors[i], sizeof(struct neighbor_list));
 				return 1;
 			}
-			else
-			{
-				cur_nbr = cur_nbr->next;
-			}
+		
 		}
-			cur_if = cur_if->next;
+		cur_if = cur_if->next;
 	}
 	return 0;
 }
@@ -852,7 +786,6 @@ int update_ftable(struct sr_instance *sr)
 			if(iface == NULL || nbr == NULL)
 			{
 				
-				assert((iface || nbr));
 				assert(iface);
 				assert(nbr);
 				printf("Error - Next hop doesn't match any neighbors");
