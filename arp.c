@@ -219,7 +219,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
     lock_cache(sr->arp_sub);
     // fprintf(stderr, "locked in search_cache\n");
 	
-	print_cache(sr);
+	//print_cache(sr);
 	check_cache_invalid(sr);
     
    // unsigned char* mac=(unsigned char *)malloc(ETHER_ADDR_LEN);
@@ -235,7 +235,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	
 			//memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
 			unlock_cache(sr->arp_sub);
-			fprintf(stderr, "FROM SEARCHING CACHE--RETURN: ");
+			//fprintf(stderr, "FROM SEARCHING CACHE--RETURN: ");
 			DebugMAC(cache_walker->mac);
 			return cache_walker->mac;
 		}

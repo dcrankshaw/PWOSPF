@@ -36,7 +36,7 @@ DONE?
 TODO:
 
 
- 	
+-comment out __attribute-- ((packed)) for structs that don't need them?????
 -free all malloced members of structs in buffers
 -need a netmask config file
 

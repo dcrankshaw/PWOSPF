@@ -105,11 +105,9 @@ void add_neighbor(struct sr_instance* sr, char *name, uint32_t router_id, struct
 		the found mask, prefix, but with router_id (indicates two routers on same subnet
 		with switch).*/
 
-
 }
 
-/*THREADSAFE*/
-/*checks whether there are any expired entries in the topoology*/
+/*this get's called from the OSPF_SUBSYSTEM thread*/
 void check_top_invalid(struct sr_instance *sr)
 {
 	pwospf_lock(sr->ospf_subsys);
@@ -150,11 +148,26 @@ void check_top_invalid(struct sr_instance *sr)
 	}
 	
 	
+	/*TODO comment this out and put back the if statement*/
+	dijkstra(sr, sr->ospf_subsys->this_router);
+	fprintf(stderr, "In check_top - Ftable BEFORE updating:\n");
+	print_ftable(sr);
+	update_ftable(sr);
+	fprintf(stderr, "In check_top - Ftable AFTER updating:\n");
+	print_ftable(sr);
+
+	
+	/*
 	if(changed == 1)
 	{
 		dijkstra(sr, sr->ospf_subsys->this_router);
+		
+		fprintf(stderr, "In check_top - Ftable BEFORE updating:\n");
+		print_ftable(sr);
 		update_ftable(sr);
-	}
+		fprintf(stderr, "In check_top - Ftable AFTER updating:\n");
+		print_ftable(sr);
+	}*/
 	
 	pwospf_unlock(sr->ospf_subsys);
 }
@@ -343,12 +356,14 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 		}
 	}
 	/*recompute dijkstra's algorithm*/
-	print_topo(sr);
+	//print_topo(sr);
 	
 	
 	dijkstra(sr, sr->ospf_subsys->this_router);
+	update_ftable(sr);
 	
-	fprintf(stderr, "\n\n--TOPO AFTER DIJKSTRA's--\n");
+	/*fprintf(stderr, "\n\n--TOPO AFTER DIJKSTRA's--\n");
+	
 	
 	struct adj_list* adj_walker = sr->ospf_subsys->network;
 	while(adj_walker)
@@ -370,12 +385,12 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 		//fprintf(stderr, "\n");
 		adj_walker = adj_walker->next;
 	}
-	fprintf(stderr, "\n");
-	fprintf(stderr, "Ftable BEFORE updating:\n");
+	fprintf(stderr, "\n");*/
+	/*fprintf(stderr, "Ftable BEFORE updating:\n");
 	print_ftable(sr);
 	update_ftable(sr);
 	fprintf(stderr, "Ftable AFTER updating:\n");
-	print_ftable(sr);
+	print_ftable(sr);*/
 	
 	pwospf_unlock(sr->ospf_subsys);
 	return 1;
@@ -384,9 +399,11 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 void print_ftable(struct sr_instance *sr)
 {
 	struct ftable_entry* current = sr->ospf_subsys->fwrd_table;
+	
 	fprintf(stderr, "--- FORWARDING TABLE ---\n");
 	while(current)
 	{
+		fprintf(stderr, "%x --->", current);
 		fprintf(stderr, "Prefix: %s   ", inet_ntoa(current->prefix));
 		fprintf(stderr, "Mask: %s   ", inet_ntoa(current->mask));
 		fprintf(stderr, "Next Hop: %s   ", inet_ntoa(current->next_hop));
@@ -695,12 +712,12 @@ int get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrre
 {
 	struct in_addr nh;
 	nh.s_addr = id;
-	fprintf(stderr, "Next hop ID: %s\n", inet_ntoa(nh));
+	//fprintf(stderr, "Next hop ID: %s\n", inet_ntoa(nh));
 	
 	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
 	while(cur_if)
 	{
-		fprintf(stderr, "Interface %s exists\n", cur_if->name);
+		//fprintf(stderr, "Interface %s exists\n", cur_if->name);
 		cur_if = cur_if->next;
 	}
 	
@@ -714,7 +731,6 @@ int get_if_and_neighbor(struct pwospf_iflist *ifret, struct neighbor_list *nbrre
 			
 			if(cur_nbr->id == id)
 			{
-				fprintf(stderr, "FOUND!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 				
 				memmove(ifret, cur_if, sizeof(struct pwospf_iflist));
 				memmove(nbrret, cur_nbr, sizeof(struct neighbor_list));
@@ -991,8 +1007,8 @@ void dijkstra(struct sr_instance* sr, struct router *host)
 	{
 		struct in_addr lu_id;
 		lu_id.s_addr = least_unknown->rid;
-		fprintf(stderr, "Least unknown: %s ", inet_ntoa(lu_id));
-		fprintf(stderr, "has %d adjacencies\n", least_unknown->adj_size);
+		/*fprintf(stderr, "Least unknown: %s ", inet_ntoa(lu_id));
+		fprintf(stderr, "has %d adjacencies\n", least_unknown->adj_size);*/
 		
 		least_unknown->known = 1; /*mark it as visited*/
 		int i;

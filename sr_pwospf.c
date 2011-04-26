@@ -168,7 +168,7 @@ static
 void* pwospf_run_thread(void* arg)
 {
     struct sr_instance* sr = (struct sr_instance*)arg;
-	fprintf(stderr, "REACHED OSPF SUBSYSTEM THREAD\n");
+	//fprintf(stderr, "REACHED OSPF SUBSYSTEM THREAD\n");
     while(1)
     {
         /* -- PWOSPF subsystem functionality should start  here! -- */
@@ -206,7 +206,7 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     //fprintf(stderr, "Got to handle_pwospf\n");
     ps->packet= ps->packet + sizeof(struct ip);
     struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*)(ps->packet);
-    fprintf(stderr, "Type: %u\n", pwospf_hdr->type);
+    //fprintf(stderr, "Type: %u\n", pwospf_hdr->type);
     if(pwospf_hdr->version!=OSPF_V2)
     {
         fprintf(stderr, "Invalid version.\n");
@@ -240,12 +240,12 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     /* Now need to switch to the different hello and lsu pwospf */
     if(pwospf_hdr->type==OSPF_TYPE_HELLO)
     {
-        fprintf(stderr, "Going to handle_hello\n");
+        //fprintf(stderr, "Going to handle_hello\n");
         handle_HELLO(ps, ip_hdr);
     }
     else if(pwospf_hdr->type==OSPF_TYPE_LSU)
     {
-        fprintf(stderr, "Going to handle_lsu\n");
+        //fprintf(stderr, "Going to handle_lsu\n");
         handle_lsu(pwospf_hdr, ps, ip_hdr);
     }
     else

@@ -117,7 +117,7 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                 //fprintf(stderr, "b\n");
                 if(neigh_walker->ip_address.s_addr==prev_src.s_addr)
                 {
-                    fprintf(stderr, "not forwarding lsu because neighbor is source.\n");
+                   // fprintf(stderr, "not forwarding lsu because neighbor is source.\n");
                     break;  /*Don't forward packet back to who we received lsu from */
                 }
                 ip_hdr->ip_dst=neigh_walker->ip_address;
@@ -189,7 +189,7 @@ void send_lsu(struct sr_instance* sr)
     struct ospfv2_lsu_adv* advertisements=(struct ospfv2_lsu_adv*)malloc
                     ((my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv)));
     struct ospfv2_lsu_adv* advs=generate_adv(advertisements, sr, num_entries_rt);
-    print_ads(advs, my_router->subnet_size + num_entries_rt);
+    //print_ads(advs, my_router->subnet_size + num_entries_rt);
     struct ospfv2_lsu_adv* adv_walker=advs;
     int j;
     for(j=0; j<(my_router->subnet_size + num_entries_rt); j++)
