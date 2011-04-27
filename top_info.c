@@ -87,25 +87,20 @@ void check_top_invalid(struct sr_instance *sr)
 	
 	
 	/*TODO comment this out and put back the if statement*/
-	dijkstra(sr, sr->ospf_subsys->this_router);
+	/*dijkstra(sr, sr->ospf_subsys->this_router);
 	fprintf(stderr, "In check_top - Ftable BEFORE updating:\n");
 	print_ftable(sr);
 	update_ftable(sr);
 	fprintf(stderr, "In check_top - Ftable AFTER updating:\n");
-	print_ftable(sr);
+	print_ftable(sr);*/
 
 	
-	/*
+	
 	if(changed == 1)
 	{
 		dijkstra(sr, sr->ospf_subsys->this_router);
-		
-		fprintf(stderr, "In check_top - Ftable BEFORE updating:\n");
-		print_ftable(sr);
 		update_ftable(sr);
-		fprintf(stderr, "In check_top - Ftable AFTER updating:\n");
-		print_ftable(sr);
-	}*/
+	}
 	
 	pwospf_unlock(sr->ospf_subsys);
 }
@@ -345,7 +340,6 @@ void print_ftable(struct sr_instance *sr)
 	fprintf(stderr, "--- FORWARDING TABLE ---\n");
 	while(current)
 	{
-		fprintf(stderr, "%x --->", (int) current);
 		fprintf(stderr, "Prefix: %s   ", inet_ntoa(current->prefix));
 		fprintf(stderr, "Mask: %s   ", inet_ntoa(current->mask));
 		fprintf(stderr, "Next Hop: %s   ", inet_ntoa(current->next_hop));
@@ -904,7 +898,6 @@ struct ftable_entry *ftable_contains(struct sr_instance *sr, struct in_addr pfix
 /*NOT THREADSAFE*/
 void reset_ftable(struct sr_instance *sr)
 {
-	fprintf(stderr, "#*#*#*#*#*#*#*#*#*#*# Resetting forwarding table #*#*#*#*#*#*#*#*#*#*#\n");
 	struct ftable_entry *current = sr->ospf_subsys->fwrd_table;
 	
 	struct ftable_entry *prev = NULL;

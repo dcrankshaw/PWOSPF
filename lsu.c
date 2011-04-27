@@ -101,7 +101,7 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
 
 void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet, struct ip* ip_hdr)
 {
-    fprintf(stderr, "IN FORWARD LSU!!\n");
+   // fprintf(stderr, "IN FORWARD LSU!!\n");
     if(ip_hdr->ip_ttl < 1)
     {
         /*packet expired*/
@@ -156,17 +156,17 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                             memmove(new_eth->ether_dhost, mac, ETHER_ADDR_LEN);
                             uint16_t packet_size=sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + ospf_len;
                             sr_send_packet(sr, packet, packet_size, iface_walker->name);
-                            fprintf(stderr, "Forwarded LSU just sent!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+                          //  fprintf(stderr, "Forwarded LSU just sent!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                             /*Packet has been sent*/
                         }
                         else
                         {
                             //fprintf(stderr, "d\n");
                             //fprintf(stderr, "About to get mac for forwarding\n");
-                            fprintf(stderr, "Buffering LSU with IP_dst of: %s\n", inet_ntoa(ip_hdr->ip_dst));
+                        //    fprintf(stderr, "Buffering LSU with IP_dst of: %s\n", inet_ntoa(ip_hdr->ip_dst));
                             get_mac_address(sr, ip_hdr->ip_dst, packet, ps->len, iface_walker->name, 1, NULL);
                             /**** NEED TO FREE ****/
-                            fprintf(stderr, "Forwarded LSU Buffered!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+                         //   fprintf(stderr, "Forwarded LSU Buffered!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                         }    
                     
                     

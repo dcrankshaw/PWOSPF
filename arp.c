@@ -169,7 +169,6 @@ void check_cache_invalid(struct sr_instance* sr)
         curr_time=time(NULL);
     	if(walker->timenotvalid < curr_time)
     	{
-    	    fprintf(stderr, "DELETING A CACHE ENTRY BECAUSE OF TIMEOUT!!!!!!!!!\n");
     	    if(prev==0)         /* Item is first in cache. */  
 			{
 				if(sr->arp_sub->arp_cache->next)
@@ -215,18 +214,13 @@ void check_cache_invalid(struct sr_instance* sr)
 *******************************************************************/
 uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
-     //fprintf(stderr, "trying to lock in search_cache\n");
     lock_cache(sr->arp_sub);
     print_cache(sr);
-    // fprintf(stderr, "locked in search_cache\n");
 	
-	//print_cache(sr);
 	check_cache_invalid(sr);
     
-   // unsigned char* mac=(unsigned char *)malloc(ETHER_ADDR_LEN);
     
 	struct arp_cache_entry* cache_walker=0;
-	//struct arp_cache_entry* prev=0;
 	cache_walker=sr->arp_sub->arp_cache;
 	
 	while(cache_walker)
@@ -234,50 +228,18 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 		if(ip==cache_walker->ip_add)
 		{
 	
-			//memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
 			unlock_cache(sr->arp_sub);
-			//fprintf(stderr, "FROM SEARCHING CACHE--RETURN: ");
-			DebugMAC(cache_walker->mac);
 			return cache_walker->mac;
 		}
 		else
 		{
-			//prev=cache_walker;
 			cache_walker = cache_walker->next;
 		}
 	}
 	
-	/*while(cache_walker) 
-	{
-	    time_t curr_time=time(NULL);
-	    assert(cache_walker);
-	    fprintf(stderr, "Cache Walker-> timenotvalid: %lu ", (unsigned long)cache_walker->timenotvalid);
-	    fprintf(stderr, "Curr Time: %lu \n", (unsigned long)curr_time);
-		if(cache_walker->timenotvalid > curr_time)  
-		{
-			if(ip==cache_walker->ip_add)
-			{
-		
-				memmove(mac, cache_walker->mac, ETHER_ADDR_LEN);
-				unlock_cache(sr->arp_sub);
-				return mac;
-			}
-			else
-			{
-			    prev=cache_walker;
-			    cache_walker = cache_walker->next;
-			}
-		}
-		else                                        
-		{
-			fprintf(stderr, "Deleting from ARP cache\n");
-			cache_walker = delete_entry(sr, cache_walker, prev);
-		}
-	}*/
 	
 	/*IP Address is not in cache. */
 	unlock_cache(sr->arp_sub);
-	// fprintf(stderr, "unlocked in search cache\n");
 	/*This free is causing major issues, SEGFAULT*/
 	/*if(mac)
 	    free(mac);*/
@@ -425,29 +387,6 @@ uint8_t* construct_request(struct sr_instance* sr, const char* interface,const u
 		arp_hdr->ar_tha[i]=0x00;
 	}
 	arp_hdr->ar_tip=ip_addr;
-	/*int happyfuntime = sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_arphdr);
-	for(i = 0; i < happyfuntime; i++)
-	{
-		
-		if(i > 0 && ((i % 2) == 0))
-		{
-			fprintf(stderr, " ");
-		}
-		fprintf(stderr, "%x", request[i]);
-		if(i > 0 && ((i % 8) == 0))
-		{
-			fprintf(stderr, "\n");
-		}
-	}*/
-	
-	//fprintf(stderr, "\n\n");
-	
-	/*fprintf(stderr,"Ether dhost: ");
-	for(i=0; i< ETHER_ADDR_LEN; i++)
-	{
-	    fprintf(stderr, "%x ", eth_hdr->ether_dhost[i]);
-	}
-	fprintf(stderr,"\n");*/
 	
 	return request;
 	

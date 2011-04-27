@@ -45,9 +45,7 @@ int pwospf_init(struct sr_instance* sr)
 	
     /* -- handle subsystem initialization here! -- */
 	
-	printf("about to create interfaces...\n");
 	create_pwospf_ifaces(sr);
-	printf("created interfaces\n");
 	
 	char *eth0_interface = "eth0";
 	struct sr_if* zero = sr_get_interface(sr, eth0_interface);
@@ -62,7 +60,6 @@ int pwospf_init(struct sr_instance* sr)
 	int i = 0;
 	struct pwospf_iflist *cur_if = sr->ospf_subsys->interfaces;
 	struct ftable_entry* cur_ft_entry = NULL;
-	//struct route* cur_sn = NULL;
 	
 	while(cur_if)
 	{

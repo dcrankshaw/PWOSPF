@@ -68,7 +68,6 @@
  
  void delete_all_lsu(struct lsu_buf_ent* buff)
  {
-    fprintf(stderr, "Deleting all LSU's in buffer.\n");
     struct lsu_buf_ent* prev=buff;
     while(buff)
     {

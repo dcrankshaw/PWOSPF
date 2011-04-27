@@ -69,16 +69,8 @@ void sr_init(struct sr_instance* sr)
 	char *if_config = IFACE_CONFIG;
 	assert(init_if_config(sr, if_config));
 	print_if_config(sr);
-	printf("Reached here\n");
-	/*pwospf_init(sr);*/
-	printf("OSPF succesfully initialized\n");
 	
 	arp_init(sr);
-	
-	
-	printf("\n\n");
-	print_rule_table(sr);
-	printf("\n\n");
 
 } /* -- sr_init -- */
 
@@ -150,14 +142,9 @@ void sr_handlepacket(struct sr_instance* sr,
 		    fprintf(stderr, "Malloc Error - Out of memory\n");
 		}
 		eth = (struct sr_ethernet_hdr *)packet;
-		//fprintf(stderr, "In handle packet:::eth_hdr--dhost: ");
-		//DebugMAC(eth->ether_dhost);
 		
 		memmove(perm_eth, eth, eth_offset);
 		leave_hdr_room(&current, eth_offset);
-		
-		//fprintf(stderr, "\nIn handle packet--perm_eth--dhost: ");
-		//DebugMAC(perm_eth->ether_dhost);
 
 		switch(ntohs(eth->ether_type))
 		{
@@ -225,8 +212,6 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 {
 
 	/*check ARP cache to see if the MAC address for the outgoing IP address is there*/
-	//fprintf(stderr, "\nIn Create_eth_hdr:::: eth_rec->ether_dhost: ");
-	//DebugMAC(eth_rec->ether_dhost);
 	
 	struct sr_if *sif = 0;
 	if(ps->forward)
@@ -276,9 +261,6 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 	
 	if(mac != NULL)
 	{
-	    fprintf(stderr, "Mac address found to forward IP packet: ");
-	    DebugMAC(mac);
-	    fprintf(stderr, "\n");
 		struct sr_ethernet_hdr *eth = (struct sr_ethernet_hdr *) newpacket;
 		memmove(eth->ether_dhost, mac, ETHER_ADDR_LEN);
 		memmove(eth->ether_shost, sif->addr, ETHER_ADDR_LEN);
@@ -287,7 +269,6 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 	}
 	else
 	{
-	    fprintf(stderr, "Mac address NOT found to forward IP packet.\n");
 		assert(eth_rec);
 		struct sr_ethernet_hdr *eth = (struct sr_ethernet_hdr *) newpacket;
 		memmove(eth->ether_shost, sif->addr, ETHER_ADDR_LEN);
@@ -365,7 +346,6 @@ int handle_ip(struct packet_state *ps)
 						{ 
 							if(ip_hdr->ip_p == IPPROTO_ICMP)
 							{
-								fprintf(stderr, "ICMP packet.\n");
 								if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
 								ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, 0, 0) == 0)
 								/*send 0 if it's an ICMP packet because they don't 
@@ -375,7 +355,6 @@ int handle_ip(struct packet_state *ps)
 							else if(ip_hdr->ip_p == IPPROTO_TCP 
 								||ip_hdr->ip_p == IPPROTO_UDP)
 							{
-							    fprintf(stderr, "TCP or UDP packet.\n");
 								if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 								{
 									src_port = *((uint16_t*)ps->packet);
@@ -392,7 +371,6 @@ int handle_ip(struct packet_state *ps)
 
 							else if(ip_hdr->ip_p == OSPFV2_TYPE)
 							{
-							    fprintf(stderr, "OSPF packet.\n");
 								handle_pwospf(ps, ip_hdr);
 								return 0; /* Tells handle_packet not to try to send packet*/
 
@@ -410,7 +388,6 @@ int handle_ip(struct packet_state *ps)
 					}
 					else if(ip_hdr->ip_p == OSPFV2_TYPE)
                     {
-                        //fprintf(stderr, "OSPF packet.\n");
                         handle_pwospf(ps, ip_hdr);
                         return 0; /* Tells handle_packet not to try to send packet*/
 
@@ -456,7 +433,6 @@ int handle_ip(struct packet_state *ps)
 		{
 			/*check if interface==eth0*/
 
-			fprintf(stderr, "**************IP dest: %s******************\n", inet_ntoa(ip_hdr->ip_dst));
 			ps->dyn_entry = NULL;
 			ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
 			if(ps->dyn_entry == NULL)
@@ -492,7 +468,6 @@ int handle_ip(struct packet_state *ps)
 					if(ip_hdr->ip_p == IPPROTO_ICMP)
 					{
 						
-						fprintf(stderr, "ICMP packet to forward\n");
 						if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
 							ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, 0, 0) == 0)
 							/*send 0 if it's an ICMP packet because they don't 
@@ -503,21 +478,13 @@ int handle_ip(struct packet_state *ps)
 						||(ip_hdr->ip_p == IPPROTO_UDP))
 					{
 						
-						fprintf(stderr, "TCP or UDP packet to forward.\n");
 						if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 						{
-
-
-							/*memmove(&src_port, ps->packet, 2);
-							memmove(&dst_port, (ps->packet + 2), 2);*/
 
 							src_port = 0;
 							dst_port = 0;
 							src_port = *((uint16_t*)ps->packet);
 							dst_port = *((uint16_t*)(ps->packet + 2));
-							//src_port = ntohs(src_port);
-							//dst_port = ntohs(dst_port);
-
 
 							if(check_connection(ps->sr, ip_hdr->ip_src.s_addr,
 							ip_hdr->ip_dst.s_addr, ip_hdr->ip_p, src_port, dst_port) == 0)
@@ -527,7 +494,6 @@ int handle_ip(struct packet_state *ps)
 						}
 						else if(ip_hdr->ip_p == OSPFV2_TYPE)
 						{
-						    //fprintf(stderr, "OSPF packet4.\n");
 							handle_pwospf(ps, ip_hdr);
 							return 0; /* Tells handle_packet not to try to send packet
 										This gets handled internally in the function*/
@@ -543,7 +509,6 @@ int handle_ip(struct packet_state *ps)
 			{
 				if(ip_hdr->ip_p == IPPROTO_ICMP)
 					{
-						fprintf(stderr, "ICMP packet from inside from an internal server\n");
 						if(!tell_valid(ps->sr, ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr,ip_hdr->ip_p, 0, 0))
 						{
 							fprintf(stderr, "Not Valid--FIREWALL.\n");
@@ -552,7 +517,6 @@ int handle_ip(struct packet_state *ps)
 					}
 					else if((ip_hdr->ip_p == IPPROTO_TCP) || (ip_hdr->ip_p == IPPROTO_UDP))
 					{
-						fprintf(stderr, "TCP or UDP packet to forward from an internal server\n");
 
 						if(ps->len >= 4)	/* Need at least 4 bytes for the 2 port numbers */
 						{

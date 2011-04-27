@@ -22,39 +22,17 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 {
 	lock_arp_q(sr->arp_sub);
 	struct arpq* entry = get_entry(sr, next_hop);
-	if(entry != NULL)
+	if((entry != NULL) && (entry->num_requests >= 0))
 	{
 	    //fprintf(stderr, "Arpq entry found.\n");
 		/*TODO: check if expired entry*/
 		if(type == LSU)
 		{
 			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
-			fprintf(stderr, "1- added to lsu buff\n");
-			
-			fprintf(stderr, "----Printing LSU Buffer----\n");
-			fprintf(stderr, "ENTRY IP: %s\n", inet_ntoa(entry->ip));
-            struct lsu_buf_ent* buf = entry->lsu_buf;
-            while(buf)
-            {
-                struct ip* ip_hdr = (struct ip*) (buf->lsu_packet + sizeof(struct sr_ethernet_hdr));
-                fprintf(stderr, "Dest IP: %s", inet_ntoa(ip_hdr->ip_dst));
-                fprintf(stderr, "\n");
-                buf = buf->next;
-            }
 		}
 		else
 		{
-			/*fprintf(stderr, "----Printing Packet Buffer----\n");
-			struct packet_buffer* buf = entry->pac_buf;
-			while(buf)
-			{
-				struct ip* ip_hdr = (struct ip*) (buf->packet + sizeof(struct sr_ethernet_hdr));
-				fprintf(stderr, "Dest IP: %s", inet_ntoa(ip_hdr->ip_dst));
-				fprintf(stderr, " Dest MAC: ");
-				DebugMAC(buf->old_eth->ether_dhost);
-				fprintf(stderr, "\n");
-				buf = buf->next;
-			}*/
+			
 			
 			
 			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
@@ -62,10 +40,34 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 			{
 				fprintf(stderr,"DIDN'T ADD AND SHOULD HAVE!!!\n");
 			}
-			//fprintf(stderr, "1- added to packet buff\n");
 		}
 
 	    unlock_arp_q(sr->arp_sub);
+	}
+	else if(entry != NULL)
+	{
+	    if(type == LSU)
+		{
+			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
+		}
+		else
+		{
+			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
+		    if(entry->pac_buf==NULL)
+		    {
+				fprintf(stderr,"DIDN'T ADD AND SHOULD HAVE!!!\n");
+			}
+		}
+		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
+		args->sr = sr;
+		args->entry = entry;
+		entry->num_requests = 0;
+		unlock_arp_q(sr->arp_sub);
+		if(pthread_create(&entry->arp_thread, 0, arp_req_init, args))
+		{
+        	perror("pthread_create");
+        	assert(0);
+    	}
 	}
 	else
 	{
@@ -74,25 +76,11 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		if(type == LSU)
 		{
 			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
-			
-			fprintf(stderr, "2 - added to lsu buff\n");
-			
-			fprintf(stderr, "----Printing LSU Buffer----\n");
-			fprintf(stderr, "ENTRY IP: %s\n", inet_ntoa(entry->ip));
-            struct lsu_buf_ent* buf = entry->lsu_buf;
-            while(buf)
-            {
-                struct ip* ip_hdr = (struct ip*) (buf->lsu_packet + sizeof(struct sr_ethernet_hdr));
-                fprintf(stderr, "Dest IP: %s", inet_ntoa(ip_hdr->ip_dst));
-                fprintf(stderr, "\n");
-                buf = buf->next;
-            }
 		
 		}
 		else
 		{
 			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			//fprintf(stderr, "2 - added to packet buff\n");
 		}
 		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
 		args->sr = sr;
@@ -124,8 +112,6 @@ struct arpq* get_entry(struct sr_instance *sr, struct in_addr next_hop)
 	struct arpq* current = sr->arp_sub->pending;
 	while(current)
 	{
-	    //fprintf(stderr,"Pending IP: %s ", inet_ntoa(current->ip));
-	    //fprintf(stderr, "Next Hop: %s \n", inet_ntoa(next_hop));
 		if(current->ip.s_addr == next_hop.s_addr)
 		{
 			return current;
@@ -143,7 +129,6 @@ void* arp_req_init(void* a)
 	unlock_arp_q(args->sr->arp_sub);
 	sleep(ARP_REQ_INTERVAL);
 	int i;
-    //i=6; /****************NEED TO DELETE THIS LINE*******************************************/
 	for(i = 1; i > 0 && i < MAX_ARP_REQUESTS; i++)
 	{
 		
@@ -153,7 +138,6 @@ void* arp_req_init(void* a)
 		uint8_t* mac = search_cache(args->sr, temp); /*will be an array of 6 bytes*/
 		if(mac != NULL)
 		{
-		   //fprintf(stderr, "ARP CACHE ENTRY FOUND!! SENDING ALL PACKS IN BUFF AND LSU_BUFF!!!\n");
 			lock_arp_q(args->sr->arp_sub);
 			send_all_packs(args->entry->pac_buf, mac, args->entry->iface_name, args->sr);
 			send_all_lsus(args->entry->lsu_buf, mac, args->entry->iface_name, args->sr);
@@ -164,7 +148,6 @@ void* arp_req_init(void* a)
 		else
 		{
 			lock_arp_q(args->sr->arp_sub);
-			fprintf(stderr, "ARP CACHE ENTRY NOT FOUND!! Looking for: %s Resending ARP Request Number %d!\n",inet_ntoa(args->entry->ip), i);
 			sr_send_packet(args->sr, args->entry->arp_request, args->entry->request_len, args->entry->iface_name);
 			args->entry->num_requests++;
 			unlock_arp_q(args->sr->arp_sub);
@@ -177,8 +160,6 @@ void* arp_req_init(void* a)
 	/*means that we sent 5 arp requests*/
 	if(i > 0)
 	{
-		
-		/*TODO: decide on args*/
 		send_all_icmps(args->entry->pac_buf, args->sr);
 		delete_all_lsu(args->entry->lsu_buf);
 	}
@@ -187,7 +168,6 @@ void* arp_req_init(void* a)
 	args->entry->lsu_buf = NULL;
 	unlock_arp_q(args->sr->arp_sub);
 	free(args);
-	//fprintf(stderr, "Terminating an ARP thread.\n");
 	return 0; /*return from thread's calling function, terminating thread*/
 }
 
@@ -232,16 +212,13 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 
 void lock_cache(struct arp_subsys* subsys)
 {
-   // fprintf(stderr, "pre cache lock\n");
     if ( pthread_mutex_lock(&subsys->cache_lock) )
     { assert(0); }
-     //fprintf(stderr, "post cache lock\n");
 } /* -- pwospf_subsys -- */
 
 
 void unlock_cache(struct arp_subsys* subsys)
 {
-   // fprintf(stderr, "unlocked cache\n");
    if ( pthread_mutex_unlock(&subsys->cache_lock) )
     { assert(0); }
 } /* -- pwospf_subsys -- */
@@ -250,10 +227,8 @@ void unlock_cache(struct arp_subsys* subsys)
 
 void lock_arp_q(struct arp_subsys* subsys)
 {
-   // fprintf(stderr, "pre arpq lock\n");
     if ( pthread_mutex_lock(&subsys->arp_q_lock) )
     { assert(0); }
-     //fprintf(stderr, "post arpq lock\n");
 } /* -- pwospf_subsys -- */
 
 
@@ -261,5 +236,4 @@ void unlock_arp_q(struct arp_subsys* subsys)
 {
     if ( pthread_mutex_unlock(&subsys->arp_q_lock) )
     { assert(0); }
-    // fprintf(stderr, "unlocked arpq\n");
 } /* -- pwospf_subsys -- */
