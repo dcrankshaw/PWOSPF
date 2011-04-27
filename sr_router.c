@@ -549,6 +549,7 @@ int handle_ip(struct packet_state *ps)
 			else /* FORWARD */
 			{
 				update_ip_hdr(ip_hdr);
+				assert(ip_hdr);
 				memmove(iph, ip_hdr, (ps->len + sizeof(struct ip)));
 				ps->forward = 1;
 				ps->res_len += ps->len;

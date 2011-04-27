@@ -55,10 +55,14 @@ void check_top_invalid(struct sr_instance *sr)
 	int changed = 0;
 	while(current)
 	{
-		/*if((current->rt->expired <= now) && (current->rt->rid != sr->ospf_subsys->this_router->rid))*/
-		if(1 == 0)
+		now = time(NULL);
+		if((current->rt->expired <= now) && (current->rt->rid != sr->ospf_subsys->this_router->rid))
 		{
+			fprintf(stderr, "TOPO before removing router\n");
+			print_topo(sr);
 			remove_from_topo(sr, current->rt);
+			fprintf(stderr, "TOPO after removing router\n");
+			print_topo(sr);
 			changed = 1;
 			if(prev == NULL)
 			{

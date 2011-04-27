@@ -51,8 +51,23 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		int found = 0;
 		while(iface)
 		{
-			
-			
+			int i;
+			for(i = 0; i < iface->nbr_size; i++)
+			{
+                fprintf(stderr, "Checking neighbors for iface %s\n\n", iface->name);
+                
+                if(iface->neighbors[i]->timenotvalid < time(NULL))
+                {
+                    fprintf(stderr, "Should be deleting a neighbor entry\n");
+                    free(iface->neighbors[i]); /*delete the entry*/
+                    iface->neighbors[i] = NULL;
+                    iface->neighbors[i] = iface->neighbors[iface->nbr_size - 1]; /*move last entry into the now empty spot*/
+                    iface->neighbors[iface->nbr_size - 1] = NULL; /*set last entry to NULL*/
+                    iface->nbr_size--; /*decrease the number of neighbors in the list*/
+                    i--; /*we have to recheck the new element we placed in the deleted elements spot*/
+                            /*we will still exit the for loop though if the deleted element was the last one*/
+                }	
+			}
 			
 			if(strcmp(iface->name, ps->interface) == 0) /* if the current interface equals the incoming interface */
 			{
@@ -77,7 +92,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 					iface->nbr_buf_size *= 2;
 				}
 				
-				int i;
 				for(i = 0; i < iface->nbr_size; i++)
 				{
 					if(iface->neighbors[i]->ip_address.s_addr == ip_hdr->ip_src.s_addr)
@@ -85,18 +99,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 						iface->neighbors[i]->timenotvalid = time(NULL) + OSPF_NEIGHBOR_TIMEOUT;
 						found = 1;
 					}
-					else if(iface->neighbors[i]->timenotvalid < time(NULL))
-					{
-						free(iface->neighbors[i]);
-						iface->neighbors[i] = NULL;
-						iface->neighbors[i] = iface->neighbors[iface->nbr_size - 1];
-						iface->neighbors[iface->nbr_size] = NULL;
-						iface->nbr_size--;
-						i--; /*we have to recheck the new element we placed in the deleted elements spot*/
-								/*we will still exit the for loop though if the deleted element was the last one*/
-						
-					}
-					
 				}
 				if(!found)
 				{
@@ -122,10 +124,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
                     rid.s_addr=old_sub->r_id;
 
 				}
-			}
-			if(found)
-			{
-			    break;
 			}
 			iface = iface->next;
 		}
