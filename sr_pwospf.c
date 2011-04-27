@@ -54,6 +54,7 @@ int pwospf_init(struct sr_instance* sr)
 	sr->ospf_subsys->fwrd_table = 0;
 	sr->ospf_subsys->network = 0;
 	sr->ospf_subsys->this_router = add_new_router(sr, zero->ip);
+	sr->ospf_subsys->last_seq_sent=0;
 	if(zero == NULL)
 	{
 		printf("null\n");

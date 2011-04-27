@@ -169,7 +169,8 @@ void check_cache_invalid(struct sr_instance* sr)
         curr_time=time(NULL);
     	if(walker->timenotvalid < curr_time)
     	{
-			if(prev==0)         /* Item is first in cache. */  
+    	    fprintf(stderr, "DELETING A CACHE ENTRY BECAUSE OF TIMEOUT!!!!!!!!!\n");
+    	    if(prev==0)         /* Item is first in cache. */  
 			{
 				if(sr->arp_sub->arp_cache->next)
 				{
@@ -216,6 +217,7 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
      //fprintf(stderr, "trying to lock in search_cache\n");
     lock_cache(sr->arp_sub);
+    print_cache(sr);
     // fprintf(stderr, "locked in search_cache\n");
 	
 	//print_cache(sr);
@@ -322,11 +324,11 @@ struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_en
 *******************************************************************/
 void print_cache(struct sr_instance* sr)
 {
-	printf("---ARP CACHE---\n");
+	fprintf(stderr,"---ARP CACHE---\n");
 	struct arp_cache_entry* cache_walker=0;
 	if(sr->arp_sub->arp_cache==0)
 	{
-		printf(" ARP Cache is Empty.\n");
+		fprintf(stderr," ARP Cache is Empty.\n");
 		return;
 	}
 	cache_walker=sr->arp_sub->arp_cache;
@@ -345,9 +347,9 @@ void print_cache_entry(struct arp_cache_entry * ent)
 	struct in_addr ip_addr;
 	assert(ent);
 	ip_addr.s_addr = ent->ip_add;
-	printf("IP: %s MAC: ", inet_ntoa(ip_addr));
+	fprintf(stderr,"IP: %s MAC: ", inet_ntoa(ip_addr));
 	DebugMAC(ent->mac); 
-	printf(" Time when Invalid: %lu\n",(long)ent->timenotvalid);
+	fprintf(stderr," Time when Invalid: %lu\n",(long)ent->timenotvalid);
 }
 
 /*******************************************************************

@@ -241,6 +241,7 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 		}
 		else
 		{
+			fprintf(stderr, "No entries to forward to.\n");
 			return 0;
 		}
 	}
@@ -275,6 +276,9 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 	
 	if(mac != NULL)
 	{
+	    fprintf(stderr, "Mac address found to forward IP packet: ");
+	    DebugMAC(mac);
+	    fprintf(stderr, "\n");
 		struct sr_ethernet_hdr *eth = (struct sr_ethernet_hdr *) newpacket;
 		memmove(eth->ether_dhost, mac, ETHER_ADDR_LEN);
 		memmove(eth->ether_shost, sif->addr, ETHER_ADDR_LEN);
@@ -283,7 +287,11 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 	}
 	else
 	{
+	    fprintf(stderr, "Mac address NOT found to forward IP packet.\n");
 		assert(eth_rec);
+		struct sr_ethernet_hdr *eth = (struct sr_ethernet_hdr *) newpacket;
+		memmove(eth->ether_shost, sif->addr, ETHER_ADDR_LEN);
+		eth->ether_type = htons(ETHERTYPE_IP);
 		get_mac_address(ps->sr, nhop, newpacket, ps->res_len, sif->name, 0, eth_rec);
 		return 0;
 	}
@@ -449,7 +457,7 @@ int handle_ip(struct packet_state *ps)
 			/*check if interface==eth0*/
 
 			fprintf(stderr, "**************IP dest: %s******************\n", inet_ntoa(ip_hdr->ip_dst));
-			ps->dyn_enty = NULL;
+			ps->dyn_entry = NULL;
 			ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
 			if(ps->dyn_entry == NULL)
 			{
@@ -459,6 +467,11 @@ int handle_ip(struct packet_state *ps)
 				    fprintf(stderr, "Nowhere to route packet to (no matching routing entry)\n");
 				    return 0;
 				}
+			}
+			else
+			{
+				
+				fprintf(stderr, "Next Hop ID is: %s\n", inet_ntoa(ps->dyn_entry->next_hop));
 			}
 			if(is_external(ps->sr, ps->interface))
 			{
@@ -533,11 +546,11 @@ int handle_ip(struct packet_state *ps)
 						fprintf(stderr, "ICMP packet from inside from an internal server\n");
 						if(!tell_valid(ps->sr, ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr,ip_hdr->ip_p, 0, 0))
 						{
+							fprintf(stderr, "Not Valid--FIREWALL.\n");
 							return 0;
 						}
 					}
-					else if(ip_hdr->ip_p == IPPROTO_TCP 
-						|| ip_hdr->ip_p == IPPROTO_UDP)
+					else if((ip_hdr->ip_p == IPPROTO_TCP) || (ip_hdr->ip_p == IPPROTO_UDP))
 					{
 						fprintf(stderr, "TCP or UDP packet to forward from an internal server\n");
 
@@ -667,6 +680,7 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 	if(response == NULL)
 	{
 		pwospf_unlock(ps->sr->ospf_subsys);
+		fprintf(stderr, "Didn't find a dynamic entry\n");
 		return NULL;
 	}
 	else
@@ -674,6 +688,8 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 		struct ftable_entry *retval = (struct ftable_entry *)malloc(sizeof(struct ftable_entry));
 		memmove(retval, response, sizeof(struct ftable_entry));
 		pwospf_unlock(ps->sr->ospf_subsys);
+		
+		fprintf(stderr, "Found dynamic entry with next hop: %s\n", inet_ntoa(retval->next_hop));
 		return retval;
 	}
 }
