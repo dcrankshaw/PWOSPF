@@ -155,6 +155,8 @@ void send_all_packs(struct packet_buffer* buff, uint8_t* mac, char* iface, struc
         sr_send_packet(sr, buff->packet, buff->pack_len, iface);
         prev=buff;
         buff=buff->next;
+        free(prev->packet);
+        free(prev->old_eth);
         free(prev);
     }
     free(buff);

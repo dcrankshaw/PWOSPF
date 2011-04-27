@@ -307,6 +307,7 @@ void send_lsu(struct sr_instance* sr)
     
     pwospf_unlock(sr->ospf_subsys);
     
+    free(pack);
     free(advs);
     
     /** Won't let me free pack?!?!?!!?!*/

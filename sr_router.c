@@ -157,6 +157,7 @@ void sr_handlepacket(struct sr_instance* sr,
 						if(current.dyn_entry)
 						{
 						    sr_send_packet(sr, head, current.res_len, current.dyn_entry->interface);
+						    free(current.dyn_entry);
 						}
 						else if(current.rt_entry)
 						{
