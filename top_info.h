@@ -38,5 +38,6 @@ void print_ftable(struct sr_instance *);
 void remove_rt_adj_using_id(struct sr_instance *, struct router*, uint32_t);
 void print_nbr_list(struct sr_instance *);
 void print_nbr(struct neighbor_list*);
+void remove_rt_sn_using_id(struct sr_instance *, struct router *, uint32_t );
 
 #endif

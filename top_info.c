@@ -58,6 +58,7 @@ void check_top_invalid(struct sr_instance *sr)
 		now = time(NULL);
 		if((current->rt->expired <= now) && (current->rt->rid != sr->ospf_subsys->this_router->rid))
 		{
+			fprintf(stderr, "Expired time: %lu, current time: %lu\n", (long) current->rt->expired, (long) now);
 			fprintf(stderr, "TOPO before removing router\n");
 			print_topo(sr);
 			remove_from_topo(sr, current->rt);
@@ -144,7 +145,7 @@ int remove_subnet_from_router(struct sr_instance *sr, struct router *rt, struct 
 }
 
 /*THREADSAFE*/
-int remove_rt_sn_using_id(struct sr_instance *sr, struct router *rt, uint32_t id)
+void remove_rt_sn_using_id(struct sr_instance *sr, struct router *rt, uint32_t id)
 {
 		/*decrease size, remove appropriate subnet, move last subnet into empty spot in the array
 	this keeps all entries packed*/
@@ -153,24 +154,15 @@ int remove_rt_sn_using_id(struct sr_instance *sr, struct router *rt, uint32_t id
 	{
 		if(rt->subnets[i]->r_id == id)
 		{
+			free(rt->subnets[i]);
 			rt->subnets[i] = NULL;
 			rt->subnets[i] = rt->subnets[rt->subnet_size-1];
-			i = rt->subnet_size;
+			rt->subnets[rt->subnet_size-1] = NULL;
 			rt->subnet_size--;
+			break;
 		}
 	}
 	
-	for(i = 0; i < rt->adj_size; i++)
-	{
-		if(id == rt->adjacencies[i]->rid)
-		{
-			rt->adjacencies[i] = NULL;
-			rt->adjacencies[i] = rt->adjacencies[rt->adj_size-1];
-			i = rt->adj_size;
-			rt->adj_size--;
-		}
-	}
-	return 1;
 }
 
 /*THREADSAFE*/
@@ -250,6 +242,7 @@ void print_rt(struct router* rt)
 	struct in_addr this_id;
 	this_id.s_addr = rt->rid;
 	fprintf(stderr, "ID: %s\n", inet_ntoa(this_id));
+	fprintf(stderr, "Expires: %lu\n", (long) rt->expired);
 	fprintf(stderr, "Adjacencies:");
 	int i;
 	for(i = 0; i < rt->adj_size; i++)
@@ -296,42 +289,9 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 			/*ERROR*/
 		}
 	}
-	/*recompute dijkstra's algorithm*/
-	//print_topo(sr);
-	
 	
 	dijkstra(sr, sr->ospf_subsys->this_router);
 	update_ftable(sr);
-	
-	/*fprintf(stderr, "\n\n--TOPO AFTER DIJKSTRA's--\n");
-	
-	
-	struct adj_list* adj_walker = sr->ospf_subsys->network;
-	while(adj_walker)
-	{
-		struct in_addr this_id;
-	    this_id.s_addr = adj_walker->rt->rid;
-	    fprintf(stderr, "ID: %s\n", inet_ntoa(this_id));
-	    if(adj_walker->rt->prev)
-	    {
-		    this_id.s_addr = adj_walker->rt->prev->rid;
-		    fprintf(stderr, "Prev ID: %s\n", inet_ntoa(this_id));
-		}
-		else
-		{
-		    fprintf(stderr, "Prev ID: NULL\n");
-		}
-			fprintf(stderr, "Num Hops: %d\n", adj_walker->rt->dist);
-		
-		//fprintf(stderr, "\n");
-		adj_walker = adj_walker->next;
-	}
-	fprintf(stderr, "\n");*/
-	/*fprintf(stderr, "Ftable BEFORE updating:\n");
-	print_ftable(sr);
-	update_ftable(sr);
-	fprintf(stderr, "Ftable AFTER updating:\n");
-	print_ftable(sr);*/
 	
 	pwospf_unlock(sr->ospf_subsys);
 	return 1;
@@ -382,6 +342,7 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 			if(router_contains(routes[i], host) == 0)
 			{
 				add_new_route(sr, routes[i], host);
+				/*If the router contains subnets that aren't advertised any more, we need to delete those subnets and adjacencies*/
 			}
 		}
 }
@@ -636,6 +597,7 @@ struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 		/*TODO:will need to initialize this to the value given in the LSU*/
 		new_router->last_seq = 0;
 		new_router->rid = host_rid;
+		new_router->expired = time(NULL);
 		new_router->known = 0;
 		new_router->dist  = -1;
 		new_router->prev = NULL;
