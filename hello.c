@@ -54,7 +54,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 			{                
                 if(iface->neighbors[i]->timenotvalid < time(NULL))
                 {
-                    fprintf(stderr, "*************************************************Do we get in here??\n");
                     uint32_t deleted_rid = iface->neighbors[i]->id;
                     free(iface->neighbors[i]); /*delete the entry*/
                     iface->neighbors[i] = NULL;

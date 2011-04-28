@@ -304,15 +304,12 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 	
 	if(time(NULL) > sr->ospf_subsys->init_time)
 	{
-	    fprintf(stderr, "Topology before checking for subnets to delete because of lack of advertisement.\n");
-	    print_topo(sr);
 	    
         int i;
         for(i=0; i< host->subnet_size; i++)
         {
             if(sub_in_adv(sr, advert_routes, host->subnets[i], num_ads)==0)
             {
-                fprintf(stderr, "******************************DELETING A TOP ENTRY!!!!*********************\n");
                 struct router* nbor = adj_list_contains(sr, host->subnets[i]->r_id);
                 remove_rt_sn_using_id(sr, host, host->subnets[i]->r_id);
                 
@@ -326,10 +323,6 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
             }
         }
     }
-	
-	fprintf(stderr, "Topology AFTER checking for subnets to delete because of lack of advertisement.\n");
-	print_topo(sr);
-	
 	
 	dijkstra(sr, sr->ospf_subsys->this_router);
 	update_ftable(sr);
