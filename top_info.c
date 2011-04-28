@@ -353,7 +353,25 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 			if(router_contains(routes[i], host) == 0)
 			{
 				/*Adds route to host's subnets */
-				add_new_route(sr, routes[i], host);
+				struct route* old_sub = router_contains_subnet(host, routes[i]->prefix.s_addr);
+				if(old_sub)
+				{
+					if(old_sub->r_id == 0)
+					{
+						old_sub->r_id = routes[i]->r_id;
+					}
+					else
+					{
+						remove_subnet_from_router(sr, host, old_sub);
+						continue;
+					}
+				
+				}
+				else
+				{
+					add_new_route(sr, routes[i], host);
+				}
+				
 			}	
 				/*If the router contains subnets that aren't advertised any more, we need to delete those subnets and adjacencies*/
 			
@@ -396,8 +414,25 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
                 /*If con_router doesn't already contain the opposite route in its subnets*/
                 if(router_contains(opp_route, con_router) == 0)
                 {
-                    /*Adds route to host's subnets */
-                    add_new_route(sr, opp_route, con_router);
+					/*Adds route to host's subnets */
+					struct route* old_sub = router_contains_subnet(con_router, opp_route->prefix.s_addr);
+					if(old_sub)
+					{
+						if(old_sub->r_id == 0)
+						{
+							old_sub->r_id = opp_route->r_id;
+						}
+						else
+						{
+							remove_subnet_from_router(sr, con_router, opp_route);
+							continue;
+						}
+					
+					}
+					else
+					{
+						 add_new_route(sr, opp_route, con_router);
+					}
                 }
                 free(opp_route);
 
