@@ -354,7 +354,7 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 		    fprintf(stderr, "Mask: %s ", inet_ntoa(routes[i]->mask));
 		    struct in_addr rid_to_print;
 		    rid_to_print.s_addr=routes[i]->r_id;
-		    fprintf(stderr, "Mask: %s \n", inet_ntoa(rid_to_print));
+		    fprintf(stderr, "RID: %s \n", inet_ntoa(rid_to_print));
 		
 		
 			/*If this does not already exist in the host's subnets*/
@@ -542,7 +542,7 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 			        }
 			        
 			        
-			        /* 
+			         
 			            If network contains route[i]->rid
 			            {
 			                Check Host's adj size against buffer size
@@ -628,7 +628,7 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
     } 
     
     host->subnets[host->subnet_size]=(struct route*)malloc(sizeof(struct route));
-    host->subnets[host->subnet_size]=current;
+    memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
     host->subnet_size++;
 }
 
