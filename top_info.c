@@ -248,7 +248,6 @@ void print_rt(struct router* rt)
 	struct in_addr this_id;
 	this_id.s_addr = rt->rid;
 	fprintf(stderr, "ID: %s\n", inet_ntoa(this_id));
-	fprintf(stderr, "Expires: %lu\n", (long) rt->expired);
 	fprintf(stderr, "Adjacencies:");
 	int i;
 	for(i = 0; i < rt->adj_size; i++)
@@ -258,10 +257,14 @@ void print_rt(struct router* rt)
 		fprintf(stderr, " %s, ", inet_ntoa(id));
 	}
 	
+	struct in_addr rid;
 	fprintf(stderr, "\nSubnets:");
 	for(i = 0; i < rt->subnet_size; i++)
 	{
-		fprintf(stderr, " %s, ", inet_ntoa(rt->subnets[i]->prefix));
+		fprintf(stderr, "Prefix: %s, ", inet_ntoa(rt->subnets[i]->prefix));
+		fprintf(stderr, "Mask: %s, ", inet_ntoa(rt->subnets[i]->mask));
+		rid.s_addr=rt->subnets[i]->r_id;
+		fprintf(stderr, "RID: %s\n ", inet_ntoa(rid));
 	}
 
 }
@@ -358,6 +361,132 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 			{
 				add_new_route(sr, routes[i], host);
 				/*If the router contains subnets that aren't advertised any more, we need to delete those subnets and adjacencies*/
+			}
+			else
+			{
+			    int exists=0;
+			    int i=0;
+			    for(i=0; i<host->adj_size; i++)
+			    {
+			        if(host->adjacencies[i]->rid == routes[i]->r_id)
+			        {
+			            exists=1;
+			            break;
+			        }
+			
+			    }
+			    if((routes[i]->r_id != 0) && (!exists))
+			    {
+			        fprintf(stderr, "GOT HERE NOW!!!!\n\n");
+			        
+			        struct router* con_router = adj_list_contains(sr, routes[i]->r_id);
+			        if(con_router!=NULL)
+			        {
+			            if(host->adj_buf_size == host->adj_size)
+                        {
+                            host->adjacencies = realloc(host->adjacencies, 2*host->adj_buf_size);
+                            host->adj_buf_size *= 2;
+                        }
+                        
+                        host->adjacencies[host->adj_size]=con_router;
+                        host->adj_size++;
+                        
+                        struct route* opp_route = (struct route*) malloc(sizeof(struct route));
+                        memmove(opp_route, routes[i], sizeof(struct route));
+                        opp_route->r_id = host->rid;
+                        
+                        free(opp_route);
+                        
+                        if(router_contains(opp_route, con_router) == 0)
+                        {
+                            if(con_router->subnet_buf_size == con_router->subnet_size)
+                            {
+                                con_router->subnets = realloc(con_router->subnets, 2*con_router->subnet_buf_size);
+                                con_router->subnet_buf_size *= 2;
+                            } 
+                            
+                            con_router->subnets[con_router->subnet_size]=opp_route;
+                            con_router->subnet_size++;
+                        }
+                        
+                        int has_adj=0;
+                        int j;
+                        for(j=0; j<con_router->adj_size; j++)
+                        {
+                            if(con_router->adjacencies[j]->rid==host->rid)
+                            {
+                                has_adj=1;
+                                break;
+                            }
+                        }
+                        
+                        if(!has_adj)
+                        {
+                            if(con_router->adj_buf_size == con_router->adj_size)
+                            {
+                                con_router->adjacencies = realloc(con_router->adjacencies, 2*con_router->adj_buf_size);
+                                con_router->adj_buf_size *= 2;
+                            }
+                            
+                            con_router->adjacencies[con_router->adj_size]=host;
+                            con_router->adj_size++;      
+                        }
+                        
+			        }
+			        else
+			        {
+			            struct router* con_router= add_new_router(sr, routes[i]->r_id);
+			            
+			            struct route* opp_route = (struct route*) malloc(sizeof(struct route));
+                        memmove(opp_route, routes[i], sizeof(struct route));
+                        opp_route->r_id = host->rid;
+			            con_router->subnets[con_router->subnet_size]=opp_route;
+                        con_router->subnet_size++;
+                        free(opp_route);
+                        
+                        con_router->adjacencies[con_router->adj_size]=host;
+                        con_router->adj_size++; 
+                        
+                        if(host->adj_buf_size == host->adj_size)
+                        {
+                            host->adjacencies = realloc(host->adjacencies, 2*host->adj_buf_size);
+                            host->adj_buf_size *= 2;
+                        }
+                        host->adjacencies[host->adj_size]=con_router;
+                        host->adj_size++;
+			        }
+			        
+			        
+			        /* 
+			            If network contains route[i]->rid
+			            {
+			                Check Host's adj size against buffer size
+			                Host adds connecting_rter to its adjacency list
+			                If connecting_rter !contain opp_route
+			                {
+			                    Check connecting_rter's sub size vs buffer size
+			                    add opp_route to connecting_rter subnet
+			                }
+			                If connecting_rter !contain host in adj list
+			                {
+			                    Check connecting_rter's adj size against buffer size
+			                    add host to connecting_rter's adj_list
+			                }
+			            }
+			            else
+			            {
+			                create connecting_rter
+			                add host to connecting_rter's adj_list\
+			                add opp_route to subnet
+			                add connecting_rter to host's adj list
+			            }
+			       
+			       */
+			       
+                    
+                    
+                    
+			    }
 			}
 		}
 }
@@ -555,11 +684,22 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 			struct router *new_adj = add_new_router(sr, current->r_id);
 			host->adjacencies[host->adj_size] = new_adj;
 			host->adj_size++;
+		    host->subnets[host->subnet_size] = (struct route*)malloc(sizeof(struct route));
+			memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
+			host->subnet_size++;
+			
 			struct route* opp_route = (struct route*) malloc(sizeof(struct route));
 			memmove(opp_route, current, sizeof(struct route));
 			opp_route->r_id = host->rid;
-			add_new_route(sr, opp_route, new_adj);
-		//	free(opp_route);
+			
+			new_adj->adjacencies[new_adj->adj_size] = host;
+			new_adj->adj_size++;
+		    new_adj->subnets[new_adj->subnet_size] = (struct route*)malloc(sizeof(struct route));
+			memmove(new_adj->subnets[new_adj->subnet_size], opp_route, sizeof(struct route));
+			new_adj->subnet_size++;
+			
+			//add_new_route(sr, opp_route, new_adj);
+		    free(opp_route);
 		}
 	}
 	
