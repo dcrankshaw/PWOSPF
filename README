@@ -5,11 +5,32 @@ Group 1
       Dan Crankshaw
       Maddie Stone
       Adam Gross
-      
+
 
 *Note: for some reason, on our machines, the ip version number and the ip header length
 were in the wrong bit order in the ip header struct (contained in sr_protocol.h). To fix this,
 we switched it so that each is in the reverse order that the stub code had them.
+
+LSU's:
+    The Link State Updates are sent every OSPF_DEFAULT_LSUINT seconds. The LSU includes 
+    advertisements for each of its subnets' that are known to have a neighbor router connected,
+    as well as all of the static routes.
+HELLO's: 
+    Hello packets are sent every OSPF_DEFAULT_HELLOINT seconds. 
+    
+The topology is given TOP_INITIALIZATION (in sr_pwospf.h) seconds to initialize before any subnets 
+are deleted. After TOP_INITIALIZATION seconds, subnets and adjacencies are deleted based on 
+the absence of advertisements are HELLO packets.
+
+When a MAC address is needed for a packet and not in the ARP cache, get_mac_address is called. 
+This creates an arpq entry that is added to sr->pending if it doesn't already exist. This entry 
+contains the associated IP address, the constructed ARP request, a buffer for non-LSU packets, and 
+a buffer for just LSU packets. When ARP requests need to be sent, a new thread is started for
+each IP address that we're looking for a MAC for. Every 5 seconds, if the entry is not in the cache,
+another ARP is sent. If the entry is in the cache, all of the packets in both buffers are sent, 
+the thread is terminated, and the num requests is resent. If 5 requests are sent with no reply 
+received, a ICMP Host Unreachable is sent for all packets in the packet buffer and the LSU's 
+in the LSU buffer are all dropped. The thread is then terminated.
 
 Data Structures:
 	-Topology: This implementation stores the topology as a linked list of routers.

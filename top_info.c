@@ -288,7 +288,10 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 				int num_ads)
 {
 	pwospf_lock(sr->ospf_subsys);
-
+	struct in_addr rid;
+	rid.s_addr=host_rid;
+    fprintf(stderr, "Printing Topo before add_to_top------LSU Received from %s\n", inet_ntoa(rid));
+    print_topo(sr);
 	struct router* host = adj_list_contains(sr, host_rid);
 	if(host != NULL)
 	{
@@ -323,7 +326,8 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
             }
         }
     }
-	
+	fprintf(stderr, "Printing Topo after add_to_top\n");
+    print_topo(sr);
 	dijkstra(sr, sr->ospf_subsys->this_router);
 	update_ftable(sr);
 	
