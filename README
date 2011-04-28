@@ -6,65 +6,33 @@ Group 1
       Maddie Stone
       Adam Gross
       
-      
-Add a note to the final writeup about efficiency and implementation writeups
 
-DONE?
--read in static routing table --> This is the routing table from the simple router
--*need to make sure everything (e.g. pwospf_iface) is initialized in pwospf_init()
--Handle default gateways (i.e. to the internet) - will be handled in the static routes
--update get_routing_if() in sr_router.c to first check dynamic forwarding table, then static one
--add router when we get an advert about one we don't know about (decide what exactly to put in the
- properties of the router, and will this affect Dijkstra's at all)
- 		-add check to make sure that router's with same subnet don't advertise different neighbors
- 		 (*see better comment in the code)
--I think I still need to update the LSUTIMEOUT's of each route struct when I add to them
-	-also need to check whether they are expired or not probably
--write set and get sequence methods
--handle ospf packets (in sr_router.c) - method stub is there, it just needs to be written
--decide when we have an invalid link
--drop LSU packets
--create and read in config file (with router id, area id, etc.)
-	-make sure that all struct pwospf_subsys variable are initialized in pwospf_init()
-	-all threading
-	-including possibly ARP
--buffering LSU packets
--finish ospf_subsystem initialization
+*Note: for some reason, on our machines, the ip version number and the ip header length
+were in the wrong bit order in the ip header struct (contained in sr_protocol.h). To fix this,
+we switched it so that each is in the reverse order that the stub code had them.
 
-
-
-TODO:
-
-
--comment out __attribute-- ((packed)) for structs that don't need them?????
-
--find out what entries need to be in static routing table. Rtable's must have at least 1 entry
- 
--probably some other stuff too
-
-
-Notes:
-
-This is so we each have a section of the README to pose questions to each other, add notes about
-our particular pieces of code, etc. Only delete things from your section.
-
-Dan:
--Check_top_invalid for some reason is not working - gives us segfaults
-		***COMMENTED OUT RIGHT NOW***
-		**Check top invalid made if statement of 1==0
--Create static routing tables for vhost 2 and 3 that will mirror entries in the dynamic routing table
--conditional wait for LSU packets (so that we send packets every LSUINT seconds AND whenever we
- get a change to the link state update- p_thread_cond_wait()
-
-Maddie:
---TEST FORWARDING--Commented out right now.
---Are ARP Replies correctly being added to cache
---- We seem to be adding multiple requests for the same dest to arpq
-
-
-
-
-
-
-
-
+Data Structures:
+	-Topology: This implementation stores the topology as a linked list of routers.
+		Each router has its own adjacency list (containing pointers to the other routers),
+		as well as a matching list of subnets, which includes each router, as well as any
+		application servers (or non routers) that this router is connected to. This adjacency
+		list of routers is used in a computation of Dijkstra's algorithm to find the shortest
+		path from the host router to each subnet in the topology. These shortest paths are then
+		added to the dynamic forwarding table.
+	-Interface list: The pwospf subsystem has its own interface list, creating using
+		information from the interface list in the instance struct (struct sr_instance *sr),
+		as well as additional information including an array of neighbors. These neighbors contain
+		an entry for each neighbor sending the router hello packets. The list allows for arbitrarily
+		many neighbors for any given interface.
+	
+	-We used unordered linked lists and arrays to build our data structures. We decided that
+		because any individual list was relatively small (less than 10 elements), the overhead
+		and added complexity of creating and maintaining ordered lists outweighed any benefits of
+		added efficiency (i.e. when searching the lists).
+		
+PWOSPF subsystem:
+	-The pwospf subsystem runs using a separate thread. This thread solely decides when to
+		send packets (LSU's every 30 seconds, and hello packets every 5 seconds, although
+		these are #define and can be easily changed), and sleeps to get the timing right.
+		This thread accesses some global resources that the handle_packet thread accesses
+		as well, and so we use mutexes to protect and serialize access to these shared resources.
