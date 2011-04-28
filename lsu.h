@@ -1,4 +1,10 @@
-/* This is where the LSU definitions go */
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
+ 
 #ifndef LSU_H
 #define LSU_H
 

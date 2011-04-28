@@ -106,6 +106,7 @@ int pwospf_init(struct sr_instance* sr)
 	sr->ospf_subsys->last_seq_sent = 0;
 	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
 	sr->ospf_subsys->autype = 0;
+	sr->ospf_subsys->init_time= time(NULL) + TOP_INITIALIZATION;
 	print_topo(sr);
 
     /* -- start thread subsystem -- */

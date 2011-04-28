@@ -54,6 +54,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 			{                
                 if(iface->neighbors[i]->timenotvalid < time(NULL))
                 {
+                    uint32_t deleted_rid = iface->neighbors[i]->id;
                     free(iface->neighbors[i]); /*delete the entry*/
                     iface->neighbors[i] = NULL;
                     iface->neighbors[i] = iface->neighbors[iface->nbr_size - 1]; /*move last entry into the now empty spot*/
@@ -61,7 +62,20 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
                     iface->nbr_size--; /*decrease the number of neighbors in the list*/
                     i--; /*we have to recheck the new element we placed in the deleted elements spot*/
                             /*we will still exit the for loop though if the deleted element was the last one*/
-                }	
+                            
+                    /*TODO: delete adjacency adn subnet*/
+                   /* if(time(NULL)> ps->sr->ospf_subsys->init_time)
+                    {
+                        remove_rt_sn_using_id(ps->sr, ps->sr->ospf_subsys->this_router, deleted_rid);
+                        struct router* nbor = adj_list_contains(ps->sr, deleted_rid);
+                        if(nbor!=NULL)
+                        {
+                            remove_rt_sn_using_id(ps->sr, nbor, ps->sr->ospf_subsys->this_router->rid);
+                            remove_rt_adj_using_id(ps->sr, nbor, ps->sr->ospf_subsys->this_router->rid);
+                            remove_rt_adj_using_id(ps->sr, ps->sr->ospf_subsys->this_router, nbor->rid);
+                        }
+                    }*/
+               }	
 			}
 			
 			if(strcmp(iface->name, ps->interface) == 0) /* if the current interface equals the incoming interface */

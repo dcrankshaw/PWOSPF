@@ -12,6 +12,12 @@
 #include <time.h>
 
 #include "sr_if.h"
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
 #include "sr_router.h"
 
 #define FW_EXTERNAL	"external"

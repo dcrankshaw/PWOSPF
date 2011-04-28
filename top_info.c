@@ -300,6 +300,34 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 		add_to_existing_router(sr, advert_routes, host, num_ads);
 	}
 	
+	/*TODO: check host's subnets. If any don't have a corresponding advertisement, delete.*/
+	fprintf(stderr, "Topology before checking for subnets to delete because of lack of advertisement.\n");
+	print_topo(sr);
+	/*if(time(NULL)> sr->ospf_subsys->init_time)
+	{
+        int i;
+        for(i=0; i< host->subnet_size; i++)
+        {
+            if(sub_in_adv(sr, advert_routes, host->subnets[i], num_ads)==0)
+            {
+                struct router* nbor = adj_list_contains(sr, host->subnets[i]->r_id);
+                remove_rt_sn_using_id(sr, host, host->subnets[i]->r_id);
+                
+                if(nbor!=NULL)
+                {
+                    remove_rt_sn_using_id(sr, nbor, host_rid);
+                    remove_rt_adj_using_id(sr, nbor, host_rid);
+                    remove_rt_adj_using_id(sr, host, nbor->rid);
+                }
+                i--;
+            }
+        }
+    }*/
+	
+	fprintf(stderr, "Topology AFTER checking for subnets to delete because of lack of advertisement.\n");
+	print_topo(sr);
+	
+	
 	dijkstra(sr, sr->ospf_subsys->this_router);
 	update_ftable(sr);
 	
@@ -307,6 +335,21 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 	return 1;
 }
 
+/***********************************************************
+*   Checks that the array of advertisements contains a specific subnet
+**************************************************************/
+int sub_in_adv(struct sr_instance* sr, struct route** advs, struct route* route, int num_ads)
+{
+    int i;
+    for(i=0; i< num_ads; i++)
+    {
+        if(route_cmp(route, advs[i])==1)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
 /*******************************************************************
 *   Prints the forwarding table.
 *******************************************************************/
@@ -367,14 +410,21 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
             struct route* old_sub = router_contains_subnet(host, routes[i]->prefix.s_addr);
             if(old_sub)
             {
-                if(old_sub->r_id == 0)
+                if((routes[i]->mask.s_addr != old_sub-> mask.s_addr) && ((routes[i]->r_id ==0) || (old_sub->r_id==0)))
                 {
-                    old_sub->r_id = routes[i]->r_id;
+                    add_new_route(sr, routes[i], host);
                 }
                 else
                 {
-                    remove_subnet_from_router(sr, host, old_sub);
-                    continue;
+                    if(old_sub->r_id == 0)
+                    {
+                        old_sub->r_id = routes[i]->r_id;
+                    }
+                    else
+                    {
+                        remove_subnet_from_router(sr, host, old_sub);
+                        continue;
+                    }
                 }
             }
             else
@@ -382,7 +432,6 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
                 add_new_route(sr, routes[i], host);
             }
         }	
-        /*TODO: If the router contains subnets that aren't advertised any more, we need to delete those subnets and adjacencies*/
         
         /*Check if con_router already exists in topology*/
         if(routes[i]->r_id != 0)

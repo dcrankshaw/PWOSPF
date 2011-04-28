@@ -2,7 +2,7 @@
  * Group name: jhugroup1
  * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
  * CS344
- * 4/01/2011
+ * 4/29/2011
  **********************************************************************/
 
 #ifndef BUFFER_H
@@ -36,7 +36,6 @@ struct packet_buffer
 
 struct packet_buffer * add_to_pack_buff(struct packet_buffer*, uint8_t*, uint16_t, 
                                         struct sr_ethernet_hdr *);
-struct packet_buffer* delete_from_buffer(struct packet_state*, struct packet_buffer*);
 struct sr_if* get_if_from_mac(struct sr_instance*, unsigned char*);
 
 void send_all_packs(struct packet_buffer* , uint8_t*, char*, struct sr_instance*);

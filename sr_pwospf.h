@@ -22,7 +22,7 @@ struct sr_instance;
 
 #define IF_MASK 0xfffffffe
 #define DEF_NBR_BUF	5 /*The default size to make the array of neighbor* structs*/
-
+#define TOP_INITIALIZATION 90
 
 
 struct route
@@ -31,6 +31,7 @@ struct route
 	struct in_addr mask;
 	struct in_addr next_hop; /*probably don't need*/
 	uint32_t r_id;
+	int from_lsu;
 
 } __attribute__ ((packed));
 
@@ -111,6 +112,7 @@ struct pwospf_subsys
     uint32_t area_id;
     uint16_t autype;
     struct lsu_buf_ent* lsu_buffer;
+    time_t init_time;
 
     /* -- thread and single lock for pwospf subsystem -- */
     pthread_t thread;

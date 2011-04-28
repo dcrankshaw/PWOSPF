@@ -1,3 +1,10 @@
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
+
 #ifndef ARPQ_H
 #define ARPQ_H
 
