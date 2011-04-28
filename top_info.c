@@ -62,8 +62,7 @@ void check_top_invalid(struct sr_instance *sr)
 			fprintf(stderr, "TOPO before removing router\n");
 			print_topo(sr);
 			remove_from_topo(sr, current->rt);
-			fprintf(stderr, "TOPO after removing router\n");
-			print_topo(sr);
+			
 			changed = 1;
 			if(prev == NULL)
 			{
@@ -83,9 +82,12 @@ void check_top_invalid(struct sr_instance *sr)
 				free(current);
 				current = NULL;
 			}
+			fprintf(stderr, "TOPO after removing router\n");
+			print_topo(sr);
 		}
 		else
 		{
+			prev = current;
 			current = current->next;
 		}
 	}
@@ -190,14 +192,18 @@ int remove_from_topo(struct sr_instance *sr, struct router *rt)
 	{
 		free(rt->subnets[i]);
 	}
+	rt->subnet_size = 0;
 	
-	for(i = 0; i < rt->adj_size; i++)
+	/*for(i = 0; i < rt->adj_size; i++)*/
+	struct adj_list* net_walker=sr->ospf_subsys->network;
+	while(net_walker)
 	{
 		/*Remove the connecting route from all other routers*/
-		remove_rt_sn_using_id(sr, rt->adjacencies[i], rt->rid);
-		
+		remove_rt_sn_using_id(sr, net_walker->rt, rt->rid);
+
 		/*set to null the pointer to us in all other routers adjacency lists*/
-		remove_rt_adj_using_id(sr, rt->adjacencies[i], rt->rid);
+		remove_rt_adj_using_id(sr, net_walker->rt, rt->rid);
+		net_walker = net_walker->next;
 	}
 	free(rt->subnets);
 	free(rt->adjacencies);
@@ -278,6 +284,7 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 	}
 	else
 	{
+	    
 		//fprintf(stderr, "2 - Did not find a router\n");
 		host = add_new_router(sr, host_rid);
 		if(host != NULL)
@@ -292,6 +299,10 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 	
 	dijkstra(sr, sr->ospf_subsys->this_router);
 	update_ftable(sr);
+	
+	
+	fprintf(stderr, "Printing Topology after calling add_to_top\n");
+	print_topo(sr);
 	
 	pwospf_unlock(sr->ospf_subsys);
 	return 1;
@@ -334,7 +345,11 @@ struct router* adj_list_contains(struct sr_instance *sr, uint32_t id)
 void add_to_existing_router(struct sr_instance *sr, struct route **routes, struct router* host, int num_ads)
 {
 	/*TODO: this is pretty inefficient, it may be alright though if these stay small enough */
-		host->expired = time(NULL) + 3*OSPF_DEFAULT_LSUINT;
+		host->expired = time(NULL) + (3 * OSPF_DEFAULT_LSUINT);
+		struct in_addr rid;
+		rid.s_addr=host->rid;
+		fprintf(stderr, "Time %s will EXPIRE: ", inet_ntoa(rid));
+		fprintf(stderr, "%lu Current Time: %lu\n", (long)host->expired, (long)(time(NULL)));
 		int i;
 		for(i = 0; i < num_ads; i++)
 		{
@@ -560,6 +575,10 @@ void add_new_route(struct sr_instance *sr, struct route* current, struct router*
 /*NOT THREADSAFE*/
 struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 {
+    struct in_addr rid;
+	rid.s_addr=host_rid;
+	fprintf(stderr, "--------Adding a new Router to the topology: %s\n", inet_ntoa(rid));
+	
 	//fprintf(stderr,"In Adding a new router.\n");
 	struct router* new_router = (struct router*)malloc(sizeof(struct router));
 	struct adj_list *new_adj_entry = (struct adj_list *)malloc(sizeof(struct adj_list));
@@ -597,7 +616,7 @@ struct router* add_new_router(struct sr_instance *sr, uint32_t host_rid)
 		/*TODO:will need to initialize this to the value given in the LSU*/
 		new_router->last_seq = 0;
 		new_router->rid = host_rid;
-		new_router->expired = time(NULL);
+		new_router->expired = time(NULL) + (3 * OSPF_DEFAULT_LSUINT);
 		new_router->known = 0;
 		new_router->dist  = -1;
 		new_router->prev = NULL;
@@ -737,7 +756,7 @@ int update_ftable(struct sr_instance *sr)
 			}
 			else
 			{
-				printf("Error");
+				printf("Error -- Next hop equals NULL but numhops != 0");
 				return 0;
 			}
 		}

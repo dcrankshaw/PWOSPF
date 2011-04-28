@@ -215,7 +215,6 @@ void check_cache_invalid(struct sr_instance* sr)
 uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 {
     lock_cache(sr->arp_sub);
-    print_cache(sr);
 	
 	check_cache_invalid(sr);
     

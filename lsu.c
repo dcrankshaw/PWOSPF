@@ -150,11 +150,12 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                         
                         /*Find MAC Address of source*/
                         uint8_t * mac=search_cache(ps->sr, ip_hdr->ip_dst.s_addr);
+                        uint16_t packet_size=sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + ospf_len;
+
                         if(mac!=NULL)
                         {
                             //fprintf(stderr, "c\n");
                             memmove(new_eth->ether_dhost, mac, ETHER_ADDR_LEN);
-                            uint16_t packet_size=sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + ospf_len;
                             sr_send_packet(sr, packet, packet_size, iface_walker->name);
                           //  fprintf(stderr, "Forwarded LSU just sent!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                             /*Packet has been sent*/
@@ -164,7 +165,7 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                             //fprintf(stderr, "d\n");
                             //fprintf(stderr, "About to get mac for forwarding\n");
                         //    fprintf(stderr, "Buffering LSU with IP_dst of: %s\n", inet_ntoa(ip_hdr->ip_dst));
-                            get_mac_address(sr, ip_hdr->ip_dst, packet, ps->len, iface_walker->name, 1, NULL);
+                            get_mac_address(sr, ip_hdr->ip_dst, packet, packet_size, iface_walker->name, 1, NULL);
                             /**** NEED TO FREE ****/
                          //   fprintf(stderr, "Forwarded LSU Buffered!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                         }    
@@ -258,7 +259,7 @@ void send_lsu(struct sr_instance* sr)
     ip_hdr->ip_hl=(sizeof(struct ip))/4;
     ip_hdr->ip_v=IP_VERSION;
     ip_hdr->ip_tos=ROUTINE_SERVICE;
-    ip_hdr->ip_len=htons(sizeof(struct ip) + pwospf_hdr->len);
+    ip_hdr->ip_len=htons(sizeof(struct ip) + ntohs(pwospf_hdr->len));
     //ip_hdr->ip_len=sizeof(struct ip) + pwospf_hdr->len;
     ip_hdr->ip_id=0;
     ip_hdr->ip_off=0;
