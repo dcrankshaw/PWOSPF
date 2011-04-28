@@ -275,20 +275,15 @@ void print_rt(struct router* rt)
 int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_routes,
 				int num_ads)
 {
-	
-	//fprintf(stderr, "Locking in add_to_top()\n");
 	pwospf_lock(sr->ospf_subsys);
-	//fprintf(stderr, "Locked ospf subsys\n");
+
 	struct router* host = adj_list_contains(sr, host_rid);
 	if(host != NULL)
 	{
-		//fprintf(stderr, "1 - Found an existing router\n");
 		add_to_existing_router(sr, advert_routes, host, num_ads);	
 	}
 	else
 	{
-	    
-		//fprintf(stderr, "2 - Did not find a router\n");
 		host = add_new_router(sr, host_rid);
 		if(host != NULL)
 		{
@@ -349,20 +344,65 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 {
 	/*TODO: this is pretty inefficient, it may be alright though if these stay small enough */
 		host->expired = time(NULL) + (3 * OSPF_DEFAULT_LSUINT);
-		struct in_addr rid;
-		rid.s_addr=host->rid;
-		fprintf(stderr, "Time %s will EXPIRE: ", inet_ntoa(rid));
-		fprintf(stderr, "%lu Current Time: %lu\n", (long)host->expired, (long)(time(NULL)));
+		
 		int i;
 		for(i = 0; i < num_ads; i++)
 		{
-			/*If this does not already exist in the router's subnets*/
+		
+			/*If this does not already exist in the host's subnets*/
 			if(router_contains(routes[i], host) == 0)
 			{
+				/*Adds route to host's subnets */
 				add_new_route(sr, routes[i], host);
+			}	
 				/*If the router contains subnets that aren't advertised any more, we need to delete those subnets and adjacencies*/
-			}
-			else
+			
+            /*Check if con_router already exists in topology*/
+            if(routes[i]->r_id != 0)
+            {
+                struct router* con_router=adj_list_contains(sr, routes[i]->r_id);
+                if(con_router==NULL)
+                {
+                    con_router = add_new_router(sr, routes[i]->r_id);
+                }
+                
+                /*If host doesn't already contain con_router in host's adjacencies*/
+                if(router_has_adjacency(host, con_router) == 0)
+                {
+                    if(host->adj_buf_size == host->adj_size)
+                    {
+                        host->adjacencies = realloc(host->adjacencies, 2*host->adj_buf_size);
+                        host->adj_buf_size *= 2;
+                    }
+                    host->adjacencies[host->adj_size]=con_router;
+                    host->adj_size++;
+                }
+                
+                /*If con_router doesn't alread contain host as an adjacency */
+                if(router_has_adjacency(con_router, host) == 0)
+                {
+                    if(con_router->adj_buf_size == con_router->adj_size)
+                    {
+                        con_router->adjacencies = realloc(con_router->adjacencies, 2*con_router->adj_buf_size);
+                        con_router->adj_buf_size *= 2;
+                    }
+                    con_router->adjacencies[con_router->adj_size]=host;
+                    con_router->adj_size++;
+                }
+                
+                struct route* opp_route=(struct route*)malloc(sizeof(struct route));
+                memmove(opp_route, routes[i], sizeof(struct route));
+                opp_route->r_id=host->rid;
+                /*If con_router doesn't already contain the opposite route in its subnets*/
+                if(router_contains(opp_route, con_router) == 0)
+                {
+                    /*Adds route to host's subnets */
+                    add_new_route(sr, opp_route, con_router);
+                }
+                free(opp_route);
+
+             }			
+			/*else
 			{
 			    int exists=0;
 			    int i=0;
@@ -481,14 +521,27 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 			                add connecting_rter to host's adj list
 			            }
 			       
-			       */
+			       
 			       
                     
                     
                     
-			    }
-			}
+			    }*/
 		}
+		
+}
+
+int router_has_adjacency(struct router* host, struct router* con_router)
+{
+    int i=0;
+    for(i=0; i< host->adj_size; i++)
+    {
+        if(host->adjacencies[i]->rid==con_router->rid)
+        {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /*THREADSAFE*/
@@ -523,193 +576,15 @@ struct route* router_contains_subnet(struct router* host, uint32_t prefix)
 /*THREADSAFE*/
 void add_new_route(struct sr_instance *sr, struct route* current, struct router* host)
 {
-	
-	/*Need to resize subnet buffer*/
-	if(host->subnet_buf_size == host->subnet_size)
-	{
-		struct route** temp = realloc(host->subnets, 2*host->subnet_buf_size);
-		assert(temp);
-		host->subnets = temp; //double size of array
-		host->subnet_buf_size *= 2;
-	}
-	
-	/*add to adj_list*/
-	//int invalid = 0;
-	if(current->r_id != 0)
-	{
-		if(host->adj_buf_size == host->adj_size)
-		{
-			host->adjacencies = realloc(host->adjacencies, 2*host->adj_buf_size);
-			host->adj_buf_size *= 2;
-		
-		}
-		/*get router pointer to add to adj list*/
-		struct adj_list *cur_router = sr->ospf_subsys->network;
-		int added = 0;
-		while(cur_router)
-		{
-			struct in_addr adj_r_id;
-			adj_r_id.s_addr = current->r_id;
-			//struct in_addr host_router_id;
-			//host_router_id.s_addr = cur_router->rt->rid;
-			if(cur_router->rt->rid == current->r_id)
-			{
-				added = 1;
-				if(cur_router->rt->adj_buf_size == cur_router->rt->adj_size)
-				{
-					cur_router->rt->adjacencies = realloc(cur_router->rt->adjacencies, 2*cur_router->rt->adj_buf_size);
-					cur_router->rt->adj_buf_size *= 2;
-				}
-				//fprintf(stderr, "Found matching router\n");
-				struct route* other_sub = router_contains_subnet(cur_router->rt, current->prefix.s_addr);
-				if(other_sub != NULL)
-				{
-					
-					/*TODO: decide whether this will break anything!!!!!!!*/
-					//other_sub->r_id = ntohl(other_sub->r_id);
-					if(other_sub->mask.s_addr != current->mask.s_addr)
-					{
-						fprintf(stderr, "Non-matching masks - removed a subnet\n");
-						remove_rt_sn_using_id(sr, cur_router->rt, other_sub->r_id);
-						//invalid = 1;
-					}
-					else if(other_sub->r_id != host->rid)
-					{
-						if(other_sub->r_id == 0)
-						{
-							other_sub->r_id = host->rid; /*Update the router ID*/
-							/*Add host to cur_router's adj_list*/
-							int j;
-							int exists = 0;
-							for(j = 0; j < cur_router->rt->adj_size; j++)
-							{
-								if(cur_router->rt->adjacencies[j]->rid == host->rid)
-								{
-									exists = 1;
-									break;
-								}
-							}
-							if(exists == 0)
-							{
-								//fprintf(stderr, "This should happen\n");
-								//fprintf(stderr, "Adding to adjacency list\n");
-								cur_router->rt->adjacencies[cur_router->rt->adj_size] = host;
-								cur_router->rt->adj_size++;
-							}
-						}
-						else
-						{
-							fprintf(stderr, "Non-matching IDs - removed a subnet\n");
-							struct in_addr subid;
-							subid.s_addr = other_sub->r_id;
-							struct in_addr hostid;
-							hostid.s_addr = host->rid;
-							fprintf(stderr, "other_sub->r_id = %s, ", inet_ntoa(subid));
-							fprintf(stderr, "host->rid = %s\n", inet_ntoa(hostid));
-							remove_rt_sn_using_id(sr, cur_router->rt, other_sub->r_id);
-							//invalid = 1;
-						}
-					}
-					else
-					{
-						
-						int j;
-						int exists;
-						exists = 0;
-						for(j = 0; j < host->adj_size; j++)
-						{
-							if(host->adjacencies[j]->rid == cur_router->rt->rid)
-							{
-								exists = 1;
-								break;
-							}
-						}
-						if(exists == 0)
-						{
-							host->adjacencies[host->adj_size] = cur_router->rt;
-							host->adj_size++;
-						}
-						
-						exists = 0;
-						for(j = 0; j < cur_router->rt->adj_size; j++)
-						{
-							if(cur_router->rt->adjacencies[j]->rid == host->rid)
-							{
-								exists = 1;
-								break;
-							}
-						}
-						if(exists == 0)
-						{
-							cur_router->rt->adjacencies[cur_router->rt->adj_size] = host;
-							cur_router->rt->adj_size++;
-						}
-						
-						added = 1;
-					}
-				
-				}
-				else
-				{
-					//fprintf(stderr, "Added new connection\n");
-					//fprintf(stderr, "Adding to adjacency list\n");
-					cur_router->rt->adjacencies[cur_router->rt->adj_size] = host;
-					cur_router->rt->adj_size++;
-					host->adjacencies[host->adj_size] = cur_router->rt;
-					host->adj_size++;
-					
-					cur_router->rt->subnets[cur_router->rt->subnet_size] = (struct route*)malloc(sizeof(struct route));
-					memmove(cur_router->rt->subnets[cur_router->rt->subnet_size], current, sizeof(struct route));
-					/*change neighbor ID to hosts (it was originally cur_routers)*/
-					cur_router->rt->subnets[cur_router->rt->subnet_size]->r_id = host->rid;
-					cur_router->rt->subnet_size++;
-					added = 1;
-				}
-				
-				host->subnets[host->subnet_size] = (struct route*)malloc(sizeof(struct route));
-				memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
-				host->subnet_size++;
-				break;
-				
-			}
-			else
-			{
-				cur_router = cur_router->next;
-			}
-		}
-		if(!added)
-		{
-			/*create new router*/
-			//fprintf(stderr, "created new router\n");
-			struct router *new_adj = add_new_router(sr, current->r_id);
-			host->adjacencies[host->adj_size] = new_adj;
-			host->adj_size++;
-		    host->subnets[host->subnet_size] = (struct route*)malloc(sizeof(struct route));
-			memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
-			host->subnet_size++;
-			
-			struct route* opp_route = (struct route*) malloc(sizeof(struct route));
-			memmove(opp_route, current, sizeof(struct route));
-			opp_route->r_id = host->rid;
-			
-			new_adj->adjacencies[new_adj->adj_size] = host;
-			new_adj->adj_size++;
-		    new_adj->subnets[new_adj->subnet_size] = (struct route*)malloc(sizeof(struct route));
-			memmove(new_adj->subnets[new_adj->subnet_size], opp_route, sizeof(struct route));
-			new_adj->subnet_size++;
-			
-			//add_new_route(sr, opp_route, new_adj);
-		    free(opp_route);
-		}
-	}
-	
-	
-	else
-	{
-			host->subnets[host->subnet_size] = (struct route*)malloc(sizeof(struct route));
-			memmove(host->subnets[host->subnet_size], current, sizeof(struct route));
-			host->subnet_size++;
-	}
+    if(host->subnet_buf_size == host->subnet_size)
+    {
+        host->subnets = realloc(host->subnets, 2*host->subnet_buf_size);
+        host->subnet_buf_size *= 2;
+    } 
+    
+    host->subnets[host->subnet_size]=(struct route*)malloc(sizeof(struct route));
+    host->subnets[host->subnet_size]=current;
+    host->subnet_size++;
 }
 
 /*NOT THREADSAFE*/

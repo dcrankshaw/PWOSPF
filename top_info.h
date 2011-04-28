@@ -41,4 +41,7 @@ void print_nbr_list(struct sr_instance *);
 void print_nbr(struct neighbor_list*);
 void remove_rt_sn_using_id(struct sr_instance *, struct router *, uint32_t );
 
+
+int router_has_adjacency(struct router* , struct router* );
+
 #endif
