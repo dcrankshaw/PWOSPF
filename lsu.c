@@ -1,4 +1,9 @@
-/* LSU implementation */
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
 
 #include <stdlib.h>
 #include <assert.h>
@@ -17,10 +22,12 @@
 #include "arpq.h"
 #include "icmp.h"
 
+/*******************************************************************
+*  Handles a LSU packet. Edits topology based on advertisements in LSU packet. Calls function
+*   that forwards LSU as necessary.
+*******************************************************************/
 int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip_hdr)
 {
-    
-   //fprintf(stderr, "Locking in handle_lsu\n");
    pwospf_lock(ps->sr->ospf_subsys);
    if(pwospf->rid==ps->sr->ospf_subsys->this_router->rid)
     {
@@ -49,31 +56,25 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
     struct route* temp_rt;
     struct ospfv2_lsu_adv* temp_adv;
     int i;
-    //fprintf(stderr, "NUM ADVS FROM RECEIVED PACKET: %d ************\n", num_ads_rcd);
     for(i=0; i<num_ads_rcd; i++)
     {
         
         temp_adv=(struct ospfv2_lsu_adv*)(ps->packet);
         temp_rt = (struct route*) malloc(sizeof(struct route));
         temp_rt->prefix.s_addr=temp_adv->subnet;
-        //fprintf(stderr, "Prefix for new Route: %s\n", inet_ntoa(temp_rt->prefix));
         temp_rt->mask.s_addr=temp_adv->mask;
-        //fprintf(stderr, "Mask for new Route: %s\n", inet_ntoa(temp_rt->mask));
         temp_rt->r_id=temp_adv->rid;
         struct in_addr new_rid;
         new_rid.s_addr=temp_rt->r_id;
-        //fprintf(stderr, "RID for new Route: %s\n", inet_ntoa(new_rid));        
         advertisements[i]=temp_rt;
         ps->packet+=sizeof(struct ospfv2_lsu_adv);
     }
     
     /* Adds advertisements to topology if necessary and recomputes FT if necessary.*/
-    //fprintf(stderr, "About to add to top\n");
     if(add_to_top(ps->sr, source_rid, advertisements, num_ads_rcd)==1)
     {
         /*TODO TODO TODO: Need to send an LSU now!!!*/
     }
-     //fprintf(stderr, "Exited add_to_top\n");
     
     /*free advertisements*/
     for(i = 0; i<num_ads_rcd; i++)
@@ -99,9 +100,12 @@ int handle_lsu(struct ospfv2_hdr* pwospf, struct packet_state* ps, struct ip* ip
   
 }
 
+/*******************************************************************
+*  Checks if LSU should be forwarded. Forwards LSU to all neighbors beside neighbor who sent LSU
+*   to this router.
+*******************************************************************/
 void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet, struct ip* ip_hdr)
 {
-   // fprintf(stderr, "IN FORWARD LSU!!\n");
     if(ip_hdr->ip_ttl < 1)
     {
         /*packet expired*/
@@ -145,7 +149,6 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
                         new_eth->ether_type=htons(ETHERTYPE_IP);
                         
                         /*Find Interface to be sent out of's MAC Address*/
-                        //struct sr_if* src_if=sr_get_interface(sr, iface_walker->name);
                         memmove(new_eth->ether_shost, iface_walker->mac, ETHER_ADDR_LEN);
                         
                         /*Find MAC Address of source*/
@@ -154,41 +157,29 @@ void forward_lsu(struct packet_state* ps,struct sr_instance* sr, uint8_t* packet
 
                         if(mac!=NULL)
                         {
-                            //fprintf(stderr, "c\n");
                             memmove(new_eth->ether_dhost, mac, ETHER_ADDR_LEN);
                             sr_send_packet(sr, packet, packet_size, iface_walker->name);
-                          //  fprintf(stderr, "Forwarded LSU just sent!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                             /*Packet has been sent*/
                         }
                         else
                         {
-                            //fprintf(stderr, "d\n");
-                            //fprintf(stderr, "About to get mac for forwarding\n");
-                        //    fprintf(stderr, "Buffering LSU with IP_dst of: %s\n", inet_ntoa(ip_hdr->ip_dst));
                             get_mac_address(sr, ip_hdr->ip_dst, packet, packet_size, iface_walker->name, 1, NULL);
-                            /**** NEED TO FREE ****/
-                         //   fprintf(stderr, "Forwarded LSU Buffered!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
                         }    
-                    
-                    
-                    
-                    }
+                     }
                 }
                 
                 iface_walker=iface_walker->next;
             }
-            
-            //fprintf(stderr, "Unlocking in forward_lsu()\n");
             pwospf_unlock(sr->ospf_subsys);
-            
          }
     }
 }
 
-
+/*******************************************************************
+*  Constructs and sends and LSU
+*******************************************************************/
 void send_lsu(struct sr_instance* sr)
 {
-	//fprintf(stderr, "Locking in send_lsu()\n");
 	pwospf_lock(sr->ospf_subsys);
     struct router* my_router=sr->ospf_subsys->this_router;
     
@@ -207,12 +198,10 @@ void send_lsu(struct sr_instance* sr)
             sizeof(struct ospfv2_hdr)+sizeof(struct ospfv2_lsu_hdr);
     
     /*Generate Advertisements List*/
-    
     struct ospfv2_lsu_adv* advertisements=(struct ospfv2_lsu_adv*)malloc
                     ((my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv)));
     assert(advertisements);
     struct ospfv2_lsu_adv* advs=generate_adv(advertisements, sr, num_entries_rt);
-    //print_ads(advs, my_router->subnet_size + num_entries_rt);
     struct ospfv2_lsu_adv* adv_walker=advs;
     int j;
     for(j=0; j<(my_router->subnet_size + num_entries_rt); j++)
@@ -232,18 +221,14 @@ void send_lsu(struct sr_instance* sr)
     lsu_hdr->seq=htons(sr->ospf_subsys->last_seq_sent);
     lsu_hdr->ttl=INIT_TTL;
     lsu_hdr->num_adv=htonl(my_router->subnet_size + num_entries_rt);
-    //lsu_hdr->num_adv=my_router->subnet_size + num_entries_rt;
-     //fprintf(stderr, "---------------CREATING LSU::: num advs-- %u\n", lsu_hdr->num_adv);
     pack-=(sizeof(struct ospfv2_hdr));
     
     /*Generate PWOSPF Header*/
     struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*) pack;
     pwospf_hdr->version=OSPF_V2;
     pwospf_hdr->type=OSPF_TYPE_LSU;
-   pwospf_hdr->len=htons(sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv)));
-   // fprintf(stderr, "---------------CREATING LSU::: ospf length-- %u\n", pwospf_hdr->len);    
-    //pwospf_hdr->len=sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr)+ (my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv));
-    //fprintf(stderr, "---------------CREATING LSU::: ospf length-- %u\n", pwospf_hdr->len);    
+    pwospf_hdr->len=htons(sizeof(struct ospfv2_hdr) + sizeof(struct ospfv2_lsu_hdr) + 
+                        (my_router->subnet_size + num_entries_rt)*(sizeof(struct ospfv2_lsu_adv)));
 
     pwospf_hdr->rid=sr->ospf_subsys->this_router->rid;
     pwospf_hdr->aid= htonl(sr->ospf_subsys->area_id);
@@ -260,7 +245,6 @@ void send_lsu(struct sr_instance* sr)
     ip_hdr->ip_v=IP_VERSION;
     ip_hdr->ip_tos=ROUTINE_SERVICE;
     ip_hdr->ip_len=htons(sizeof(struct ip) + ntohs(pwospf_hdr->len));
-    //ip_hdr->ip_len=sizeof(struct ip) + pwospf_hdr->len;
     ip_hdr->ip_id=0;
     ip_hdr->ip_off=0;
     ip_hdr->ip_ttl= INIT_TTL;
@@ -309,15 +293,16 @@ void send_lsu(struct sr_instance* sr)
     pwospf_unlock(sr->ospf_subsys);
     
     free(pack);
-    free(advs);
-    
-    /** Won't let me free pack?!?!?!!?!*/
-    
+    free(advs);    
 }
 
-/***Precondition: pwospf_subsystem already lock*/
+
+/*******************************************************************
+*  Generates the advertisements to go in a LSU
+*******************************************************************/
 struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_instance* sr, int num_entries_rt)
 {
+    /***Precondition: pwospf_subsystem already lock*/
     print_nbr_list(sr);
     if(sr->ospf_subsys->this_router==NULL)
         return NULL;
@@ -333,11 +318,8 @@ struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_insta
         new_adv.mask=temp_rt->mask.s_addr;
         struct in_addr rid;
         rid.s_addr=temp_rt->r_id;
-        //fprintf(stderr, "Before: Generating adv--RID: %s\n", inet_ntoa(rid));
-        //new_adv.rid=htonl(temp_rt->r_id);
         new_adv.rid=temp_rt->r_id;
         rid.s_addr=new_adv.rid;
-        //fprintf(stderr, "After: Generating adv--RID: %s\n", inet_ntoa(rid));
         advs[i]=new_adv;
     }
     
@@ -354,11 +336,12 @@ struct ospfv2_lsu_adv* generate_adv(struct ospfv2_lsu_adv* advs, struct sr_insta
         advs[i]=new_adv;
         rt_table_walker=rt_table_walker->next;
     }
-    
-    
     return advs;   
 } 
 
+/*******************************************************************
+*  Prints advertisements.
+*******************************************************************/
 void print_ads(struct ospfv2_lsu_adv* ads, int num_ads)
 {
     fprintf(stderr, "----ADVERTISEMENTS----\n");

@@ -51,12 +51,6 @@ void sr_init(struct sr_instance* sr)
 {
     /* REQUIRES */
     assert(sr);
-
-    
-   /* sr->ospf_subsys = (struct pwospf_subsys*)malloc(sizeof(struct pwospf_subsys));
-
-    assert(sr->ospf_subsys);
-    pthread_mutex_init(&(sr->ospf_subsys->lock), 0);*/
     
     /* Add initialization code here! */
 	sr->flow_table = 0;
@@ -73,8 +67,6 @@ void sr_init(struct sr_instance* sr)
 	arp_init(sr);
 
 } /* -- sr_init -- */
-
-
 
 /*---------------------------------------------------------------------
  * Method: sr_handlepacket(uint8_t* p,char* interface)
@@ -184,8 +176,6 @@ void sr_handlepacket(struct sr_instance* sr,
 					if(current.res_len >0)
 					    sr_send_packet(sr, head, current.res_len, interface);
 				}
-				/*else
-				    free(new_entry);*/
 			}
 			break;
 			default:
@@ -211,9 +201,6 @@ void sr_handlepacket(struct sr_instance* sr,
  *---------------------------------------------------------------------*/
 int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethernet_hdr *eth_rec)
 {
-
-	/*check ARP cache to see if the MAC address for the outgoing IP address is there*/
-	
 	struct sr_if *sif = 0;
 	if(ps->forward)
 	{
@@ -240,7 +227,6 @@ int create_eth_hdr(uint8_t *newpacket, struct packet_state *ps, struct sr_ethern
 		eth->ether_type = htons(ETHERTYPE_IP);
 		return 1;
 	}
-	
 	
 	unsigned char *mac = NULL;
 	struct in_addr nhop;
@@ -321,13 +307,13 @@ int handle_ip(struct packet_state *ps)
 		/* indicates IP header has options, which we don't care about */
 		if((ip_hdr->ip_hl)*4 > sizeof(struct ip)) /* x 4 because there are 4 bytes per 32 bit word */
 		{
-			printf("struct length: %zu\npacketlength: %u\n", sizeof(struct ip), ntohs(ip_hdr->ip_len));
+			printf("Packet contains options ----struct length: %zu\npacketlength: %u\n", 
+			                                            sizeof(struct ip), ntohs(ip_hdr->ip_len));
 			return 0;
 		}
 		int ip_offset = sizeof(struct ip);
 
 		struct ip *iph = (struct ip*)ps->response; /* mark where the ip header should go */
-
 
 		int found_case = 0;	/*used to determine which loops to go into*/
 
@@ -417,10 +403,8 @@ int handle_ip(struct packet_state *ps)
 				}
 				else if(ip_hdr->ip_dst.s_addr== ntohl(OSPF_AllSPFRouters))
 				{
-                    //fprintf(stderr, "OSPF packet.\n");
                     handle_pwospf(ps, ip_hdr);
                     return 0; /* Tells handle_packet not to try to send packet*/
-
                 }
 				else
 				{
@@ -433,7 +417,6 @@ int handle_ip(struct packet_state *ps)
 		if(!found_case)
 		{
 			/*check if interface==eth0*/
-
 			ps->dyn_entry = NULL;
 			ps->dyn_entry = get_dyn_routing_if(ps, ip_hdr->ip_dst);
 			if(ps->dyn_entry == NULL)
@@ -444,11 +427,6 @@ int handle_ip(struct packet_state *ps)
 				    fprintf(stderr, "Nowhere to route packet to (no matching routing entry)\n");
 				    return 0;
 				}
-			}
-			else
-			{
-				
-				fprintf(stderr, "Next Hop ID is: %s\n", inet_ntoa(ps->dyn_entry->next_hop));
 			}
 			if(is_external(ps->sr, ps->interface))
 			{
@@ -532,9 +510,6 @@ int handle_ip(struct packet_state *ps)
 							{
 								return 0;
 							}
-
-
-
 						}
 						else { return 0; }
 					}
@@ -564,9 +539,10 @@ int handle_ip(struct packet_state *ps)
 }
 
 
-/*Updates all values in the received packet and the response packet (that we are creating)
- * so that we are dealing with the packet at the right layer (e.g. IP, ICMP, etc)
- */
+/*******************************************************
+*   Updates all values in the received packet and the response packet (that we are creating)
+*   so that we are dealing with the packet at the right layer (e.g. IP, ICMP, etc)
+**********************************************************/
 void leave_hdr_room(struct packet_state *ps, int hdr_size)
 {
 	ps->packet += hdr_size;
@@ -575,8 +551,6 @@ void leave_hdr_room(struct packet_state *ps, int hdr_size)
 	ps->res_len += hdr_size;
 }
 
-
-
 /*adapted from: http://web.eecs.utk.edu/~cs594np/unp/checksum.html */
 /*Computes the IP or ICMP checksum*/
 uint16_t cksum(uint8_t *buff, int len)
@@ -584,7 +558,6 @@ uint16_t cksum(uint8_t *buff, int len)
 	uint16_t word16;
 	uint32_t sum = 0;
 	uint16_t i;
-	
 	
 	for(i = 0; i < len; i = i + 2)
 	{
@@ -598,9 +571,7 @@ uint16_t cksum(uint8_t *buff, int len)
 	}
 	
 	sum = ~sum;
-	//fprintf(stderr, "checksum in the method: %u\n", ((uint16_t) sum));
 	return ((uint16_t) sum);
-
 }
 
 /* METHOD: Decrements ttl and recomputes IP header checksum */
@@ -611,23 +582,24 @@ void update_ip_hdr(struct ip *ip_hdr)
 	ip_hdr->ip_sum = htons(cksum((uint8_t *) ip_hdr, sizeof(struct ip)));
 }
 
+/*******************************************************************
+*  Finds dynamic routing table entry based on destination IP address. Returns NULL if none found.
+*******************************************************************/
 struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr ip_dst)
 {
 	
 	struct ftable_entry* response= NULL;
-	
-	
 	/*LOCK MUTEX*/
 	pwospf_lock(ps->sr->ospf_subsys);
 	
 	struct ftable_entry *current = ps->sr->ospf_subsys->fwrd_table;
 	struct in_addr min_mask;
 	min_mask.s_addr = 0;
+	
 	/*Iterate through forwarding table linked list*/
 	while(current != NULL)
 	{
 		/*If the bitwise AND of current mask and sought ip is equal to the current mask*/
-		
 		if((current->mask.s_addr & ip_dst.s_addr) == current->prefix.s_addr)
 		{
 			/*And if this is the closest fitting match so far
@@ -646,7 +618,6 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 	if(response == NULL)
 	{
 		pwospf_unlock(ps->sr->ospf_subsys);
-		fprintf(stderr, "Didn't find a dynamic entry\n");
 		return NULL;
 	}
 	else
@@ -654,14 +625,15 @@ struct ftable_entry* get_dyn_routing_if(struct packet_state *ps, struct in_addr 
 		struct ftable_entry *retval = (struct ftable_entry *)malloc(sizeof(struct ftable_entry));
 		memmove(retval, response, sizeof(struct ftable_entry));
 		pwospf_unlock(ps->sr->ospf_subsys);
-		
-		fprintf(stderr, "Found dynamic entry with next hop: %s\n", inet_ntoa(retval->next_hop));
 		return retval;
 	}
 }
 
 
-/* METHOD: Get the entry in the routing table corresponding to the IP address given */
+/*******************************************************************
+*  Finds static routing table entry based on destination IP address. Returns NULL if none found.
+*   Called if no dynamic routing entry was found.
+*******************************************************************/
 struct sr_rt* get_static_routing_if(struct packet_state *ps, struct in_addr ip_dst)
 {
 	struct sr_rt* response= NULL;
@@ -690,5 +662,3 @@ struct sr_rt* get_static_routing_if(struct packet_state *ps, struct in_addr ip_d
 	}
 	return response;
 }
-
-

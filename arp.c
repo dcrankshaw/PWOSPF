@@ -1,5 +1,9 @@
-/*** ARP File
-*/
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
 
 #include <stdlib.h>
 #include <assert.h>
@@ -111,7 +115,6 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
 	{
         lock_cache(ps->sr->arp_sub);
         struct arp_cache_entry* cache_walker=0;
-        //struct arp_cache_entry* prev = 0;
     
         assert(ps);
         assert(mac);
@@ -129,20 +132,7 @@ void add_cache_entry(struct packet_state* ps,const uint32_t ip, const unsigned c
         else
         {
             cache_walker = ps->sr->arp_sub->arp_cache;
-            
-           /* while(cache_walker->next)
-            {
-                if(cache_walker->timenotvalid < time(NULL))
-                {
-                    cache_walker = delete_entry(ps->sr,cache_walker, prev);
-                }
-                else
-                {
-               		prev = cache_walker;
-               		cache_walker=cache_walker->next;
-               	}	
-            }*/
-            
+           
             while(cache_walker->next)
             {
             	cache_walker=cache_walker->next;
@@ -239,9 +229,6 @@ uint8_t* search_cache(struct sr_instance* sr,const uint32_t ip)
 	
 	/*IP Address is not in cache. */
 	unlock_cache(sr->arp_sub);
-	/*This free is causing major issues, SEGFAULT*/
-	/*if(mac)
-	    free(mac);*/
 	return NULL;
 }
 
@@ -260,7 +247,6 @@ struct arp_cache_entry* delete_entry(struct sr_instance* sr, struct arp_cache_en
         }	
         else
         {
-            /*Getting a SEGFAULT*/
             sr->arp_sub->arp_cache = NULL;
             free(walker);
             return NULL;
@@ -359,7 +345,6 @@ void construct_reply(struct packet_state* ps, const struct sr_arphdr* arp_hdr,
 uint8_t* construct_request(struct sr_instance* sr, const char* interface,const uint32_t ip_addr)
 {
     uint8_t* request=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr)+sizeof(struct sr_arphdr));
-    //uint16_t pack_len= sizeof(struct sr_ethernet_hdr)+sizeof(struct sr_arphdr);
     
     struct sr_ethernet_hdr* eth_hdr=(struct sr_ethernet_hdr*)(request);
     /*Set Ethernet dest MAC address to ff:ff:ff:ff:ff:ff (Broadcast) */

@@ -1,3 +1,9 @@
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -16,62 +22,6 @@
 #include "icmp.h"
 #include "sr_pwospf.h"
 
-
-/*******************************************************************
-*   Deletes item from buffer.
-*******************************************************************/
-struct packet_buffer* delete_from_buffer(struct packet_state* ps, struct packet_buffer* want_deleted)
-{
-	struct packet_buffer* prev=0;
-	struct packet_buffer* walker=0;
-	walker=ps->sr->queue;
-	while(walker)
-	{
-		if(walker==want_deleted)
-		{
-			if(prev==0)
-			{
-			    if(ps->sr->queue->next)
-				ps->sr->queue=ps->sr->queue->next;
-				else
-				{
-				    ps->sr->queue=NULL;
-				 }   
-				break;
-			}
-			else if(!prev->next->next)
-			{
-                prev->next=NULL;
-                break;
-			}
-			else
-			{
-				prev->next=prev->next->next;
-				break;
-			}
-		}
-		else
-		{
-			prev=walker;
-			walker=walker->next;
-		}
-	}
-	if(walker->packet)
-	    free(walker->packet);
-	/*if(walker->interface)
-	    free(walker->interface);
-	if(walker->arp_req)
-	    free(walker->arp_req);*/
-	if(walker->old_eth)
-	    free(walker->old_eth);
-	if(walker)
-	    free(walker);
-	
-	if(prev!=NULL)
-        return prev->next;
-    else
-        return NULL;
-}
 
 /*******************************************************************
 *   Buffers a packet that is waiting on destination MAC address from ARP.
@@ -112,10 +62,12 @@ struct packet_buffer * add_to_pack_buff(struct packet_buffer* buff, uint8_t* pac
 		buf_walker->old_eth=(struct sr_ethernet_hdr*)malloc(sizeof(struct sr_ethernet_hdr));
 		memmove(buf_walker->old_eth, orig_eth, sizeof(struct sr_ethernet_hdr));
 	}
-	/*Need to free pack and orig header??*/
 	return buff;
 }
 
+/*******************************************************************
+*  Find an interface from a MAC address
+********************************************************************/
 struct sr_if* get_if_from_mac(struct sr_instance* sr, unsigned char* mac)
 {
 	int len = ETHER_ADDR_LEN;
@@ -144,7 +96,9 @@ struct sr_if* get_if_from_mac(struct sr_instance* sr, unsigned char* mac)
 	return NULL;
 }
 
-
+/*******************************************************************
+*  Sends all packets in buff and then empties buff and sets equal to NULL
+********************************************************************/
 void send_all_packs(struct packet_buffer* buff, uint8_t* mac, char* iface, struct sr_instance* sr)
 {
     struct packet_buffer* prev=buff;
@@ -163,6 +117,9 @@ void send_all_packs(struct packet_buffer* buff, uint8_t* mac, char* iface, struc
     buff=NULL;
 }
 
+/*******************************************************************
+*  Deletes all packets in buff
+********************************************************************/
 void delete_all_pack(struct packet_buffer* buff)
  {
     struct packet_buffer* prev=buff;
@@ -178,7 +135,9 @@ void delete_all_pack(struct packet_buffer* buff)
     buff=NULL;
  }
  
- /*TODO: need an ICMP Port Unreachable that doesn't use ps */
+/*******************************************************************
+*  Constructs and Sends an ICMP Port Unreachable for a packet.
+********************************************************************/ 
  void send_icmp(struct sr_instance *sr, uint8_t* packet, uint16_t old_len, struct sr_ethernet_hdr* old_eth)
  {
     uint8_t* icmp_pac=(uint8_t*)malloc(sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) 
@@ -249,6 +208,9 @@ void delete_all_pack(struct packet_buffer* buff)
     
  }
  
+/*******************************************************************
+*   Send ICMP Host Unreachables for all packets in buff  
+********************************************************************/
  void send_all_icmps(struct packet_buffer* buff, struct sr_instance* sr)
  {
     

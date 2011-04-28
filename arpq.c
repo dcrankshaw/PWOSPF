@@ -1,3 +1,10 @@
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
+ 
 #include <stdio.h>
 #include <unistd.h>
 #include <assert.h>
@@ -17,6 +24,11 @@
 
 
 /*type determines whether this is an LSU or non LSU packet*/
+/*******************************************************************
+*  Buffers the packet in the necessary packet or lsu buffer, constructs ARP request, and starts
+*   ARP thread.
+********************************************************************/
+
 void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *packet,
 					 uint16_t len, char *iface, int type, struct sr_ethernet_hdr* hdr)
 {
@@ -24,24 +36,14 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 	struct arpq* entry = get_entry(sr, next_hop);
 	if((entry != NULL) && (entry->num_requests >= 0))
 	{
-	    //fprintf(stderr, "Arpq entry found.\n");
-		/*TODO: check if expired entry*/
 		if(type == LSU)
 		{
 			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
 		}
 		else
 		{
-			
-			
-			
 			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-			if(entry->pac_buf==NULL)
-			{
-				fprintf(stderr,"DIDN'T ADD AND SHOULD HAVE!!!\n");
-			}
 		}
-
 	    unlock_arp_q(sr->arp_sub);
 	}
 	else if(entry != NULL)
@@ -53,10 +55,6 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 		else
 		{
 			entry->pac_buf = add_to_pack_buff(entry->pac_buf, packet, len, hdr);
-		    if(entry->pac_buf==NULL)
-		    {
-				fprintf(stderr,"DIDN'T ADD AND SHOULD HAVE!!!\n");
-			}
 		}
 		struct thread_args* args = (struct thread_args*)malloc(sizeof(struct thread_args));
 		args->sr = sr;
@@ -71,12 +69,10 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
 	}
 	else
 	{
-	    //fprintf(stderr, "Arpq entry not found.\n");
 		entry = create_entry(sr, sr->arp_sub, next_hop, iface);
 		if(type == LSU)
 		{
 			entry->lsu_buf = add_to_lsu_buff(entry->lsu_buf, packet, len);
-		
 		}
 		else
 		{
@@ -91,12 +87,13 @@ void get_mac_address(struct sr_instance *sr, struct in_addr next_hop, uint8_t *p
         	perror("pthread_create");
         	assert(0);
     	}
-	}
-	
-	
+	}	
 }
 
-/*Initialize the arp subsystem*/
+/*******************************************************************
+*   Initializes the ARP Subsystem
+*
+********************************************************************/
 void arp_init(struct sr_instance* sr)
 {
 	sr->arp_sub = (struct arp_subsys*) malloc(sizeof(struct arp_subsys));
@@ -107,6 +104,9 @@ void arp_init(struct sr_instance* sr)
 	
 }
 
+/*******************************************************************
+*   Looks for an entry in the list of arpq structs that is matched by the ip address, next_hop.
+********************************************************************/
 struct arpq* get_entry(struct sr_instance *sr, struct in_addr next_hop)
 {
 	struct arpq* current = sr->arp_sub->pending;
@@ -121,6 +121,13 @@ struct arpq* get_entry(struct sr_instance *sr, struct in_addr next_hop)
 	return NULL;
 }
 
+/*******************************************************************
+*   Runs the ARP thread that sends a specific ARP Request every 5 seconds. Checks the ARP Cache
+*   between each sending. If 5 ARP requests are sent and not responded to, ICMP Host Unreachables
+*   are sent to all the sources for the packets in the packet buffer and the lsu's in the lsu
+*   buffer are dropped. Thread ends when an entry in the ARP Cache is found or 5 requests 
+*   have been sent.
+********************************************************************/
 void* arp_req_init(void* a)
 {
 	struct thread_args* args = (struct thread_args*) a;
@@ -143,7 +150,6 @@ void* arp_req_init(void* a)
 			send_all_lsus(args->entry->lsu_buf, mac, args->entry->iface_name, args->sr);
 			i = -1; /*to exit the loop*/
 			unlock_arp_q(args->sr->arp_sub);
-			//free(mac);
 		}
 		else
 		{
@@ -171,7 +177,10 @@ void* arp_req_init(void* a)
 	return 0; /*return from thread's calling function, terminating thread*/
 }
 
-
+/*******************************************************************
+*   Constructs an arpq entry to go in sr_instance's pending linked list.
+*
+********************************************************************/
 struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, struct in_addr next_hop, char* iface)
 {
 	struct arpq* entry = (struct arpq*)malloc(sizeof(struct arpq));
@@ -206,34 +215,39 @@ struct arpq* create_entry(struct sr_instance *sr, struct arp_subsys* arp_sub, st
 	return entry;
 }
 
-
-
-
-
+/*******************************************************************
+*  Locks the ARP Cache
+********************************************************************/
 void lock_cache(struct arp_subsys* subsys)
 {
     if ( pthread_mutex_lock(&subsys->cache_lock) )
     { assert(0); }
-} /* -- pwospf_subsys -- */
+} 
 
-
+/*******************************************************************
+*   Unlocks the ARP Cache. 
+********************************************************************/
 void unlock_cache(struct arp_subsys* subsys)
 {
    if ( pthread_mutex_unlock(&subsys->cache_lock) )
     { assert(0); }
-} /* -- pwospf_subsys -- */
+} 
 
 
-
+/*******************************************************************
+*   Locks the ARP Subsystem
+********************************************************************/
 void lock_arp_q(struct arp_subsys* subsys)
 {
     if ( pthread_mutex_lock(&subsys->arp_q_lock) )
     { assert(0); }
-} /* -- pwospf_subsys -- */
+}
 
-
+/*******************************************************************
+*   Unlocks the ARP Subsystem
+********************************************************************/
 void unlock_arp_q(struct arp_subsys* subsys)
 {
     if ( pthread_mutex_unlock(&subsys->arp_q_lock) )
     { assert(0); }
-} /* -- pwospf_subsys -- */
+}

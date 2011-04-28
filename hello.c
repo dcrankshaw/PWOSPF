@@ -1,8 +1,9 @@
-/************************
-*
-*  HELLO Packet Functions
-*
-************************/
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
 
 #include <stdlib.h>
 #include <assert.h>
@@ -24,12 +25,9 @@
 ********************************************************************/
 void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 {
-    //fprintf(stderr, "In handle_hello\n");
 	struct ospfv2_hdr* pwospf_hdr = 0;
 	struct ospfv2_hello_hdr* hello_hdr = 0;
 	
-	/*lock pwospf subsys*/
-	//fprintf(stderr, "Locking in handle_hello()\n");
 	pwospf_lock(ps->sr->ospf_subsys);
 	struct pwospf_iflist* iface = ps->sr->ospf_subsys->interfaces;
 
@@ -53,12 +51,9 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 		{
 			int i;
 			for(i = 0; i < iface->nbr_size; i++)
-			{
-                fprintf(stderr, "Checking neighbors for iface %s\n\n", iface->name);
-                
+			{                
                 if(iface->neighbors[i]->timenotvalid < time(NULL))
                 {
-                    fprintf(stderr, "Should be deleting a neighbor entry\n");
                     free(iface->neighbors[i]); /*delete the entry*/
                     iface->neighbors[i] = NULL;
                     iface->neighbors[i] = iface->neighbors[iface->nbr_size - 1]; /*move last entry into the now empty spot*/
@@ -132,51 +127,6 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 	return;
 }
 
-
-/*******************************************************************
-*   Prints all of the Neighbor Lists for all Interfaces.
-*******************************************************************/
-void print_all_neighbor_lists(struct packet_state* ps)
-{
-	struct pwospf_iflist* interface_list_walker = 0;
-
-	printf("--- INTERFACE LIST ---\n");
-	if(ps->sr->ospf_subsys->interfaces == 0)
-	{
-		printf("INTERFACE LIST IS EMPTY\n");
-		return;
-	}
-	interface_list_walker = ps->sr->ospf_subsys->interfaces;
-	while(interface_list_walker)
-	{
-		printf("Interface IP: %i", interface_list_walker->address.s_addr); /* OLD: inet_ntoa(interface_list_walker->ip_add) */
-		printf("--- NEIGHBOR LIST ---\n");
-		int i;
-		if(interface_list_walker->nbr_size == 0)
-		{
-			printf("NEIGHBOR LIST IS EMPTY\n");
-			return;
-		}
-		for(i = 0; i < interface_list_walker->nbr_size; i++)
-		{
-			print_neighbor_list(interface_list_walker->neighbors[i]);
-		}
-		interface_list_walker = interface_list_walker->next;
-	}
-}
-
-/*******************************************************************
-*   Prints a single Neighbor List Entry.
-*******************************************************************/
-void print_neighbor_list(struct neighbor_list* ent)
-{
-	struct in_addr ip_addr;
-	assert(ent);
-	ip_addr = ent->ip_address;
-	printf("IP: %s\t", inet_ntoa(ip_addr));
-	printf("Time when Invalid: %lu\n",(long)ent->timenotvalid);
-}
-
 /*******************************************************************
 *   Creates and sends a HELLO packet with Ethernet, IP, OSPF, and OSPF_HELLO headers.
 *******************************************************************/
@@ -226,10 +176,6 @@ void send_HELLO(struct sr_instance* sr)
 	pwospf_hdr->aid = htonl(sr->ospf_subsys->area_id);
 	pwospf_hdr->autype = OSPF_DEFAULT_AUTHKEY;
 	pwospf_hdr->audata = OSPF_DEFAULT_AUTHKEY;
-	
-	
-
-	
 
 	/* Send the packet out on each interface. */
 	struct pwospf_iflist* iface = sr->ospf_subsys->interfaces;

@@ -1,4 +1,9 @@
-
+/**********************************************************************
+ * Group name: jhugroup1
+ * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
+ * CS344
+ * 4/29/2011
+ **********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -218,7 +223,9 @@ int is_external(struct sr_instance* sr, char *iface)
 }
 
 
-/* determines whether a given interface is internal based on the name */
+/*******************************************************************
+* determines whether a given interface is internal based on the name
+*******************************************************************/
 int is_internal(struct sr_instance* sr, char *iface)
 {
 	struct if_cat_list *walker = sr->inter;
@@ -491,15 +498,3 @@ void print_flow_table(struct sr_instance* sr)
         walker=walker->next;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

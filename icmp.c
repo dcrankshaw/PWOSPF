@@ -2,16 +2,13 @@
  * Group name: jhugroup1
  * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
  * CS344
- * 4/01/2011
+ * 4/29/2011
  * 
  * Description:
  * This file handles all ICMP functionality. It's functions are called
  * functions in sr_router.c and arp.c.
  *
  **********************************************************************/
-
-
-
 
 #include <stdlib.h>
 #include <assert.h>
@@ -36,7 +33,6 @@
  * packet being directed at one of the router's interfaces).
  * 
  *********************************************************************/
-
 void handle_icmp(struct packet_state *ps, struct ip *ip_hdr)
 {
 	int icmp_offset = sizeof(struct icmp_hdr);
@@ -67,7 +63,6 @@ void handle_icmp(struct packet_state *ps, struct ip *ip_hdr)
  * Used to construct ICMP packets, given a type and code.
  * 
  *********************************************************************/
-
 void icmp_response(struct packet_state *ps, struct ip *ip_hdr, unsigned int type, unsigned int code)
 {
 	
@@ -123,8 +118,6 @@ void icmp_response(struct packet_state *ps, struct ip *ip_hdr, unsigned int type
  * into the ICMP error message data portion of the packet.
  * 
  *********************************************************************/
- 
- 
 void create_icmp_data(struct packet_state *ps, struct ip* ip_hdr)
 {
 	if(memcpy(ps->response, ip_hdr, sizeof(struct ip)) == 0)
@@ -155,8 +148,10 @@ void create_icmp_data(struct packet_state *ps, struct ip* ip_hdr)
 	}
 }
 
-/* Called when router receives an ICMP echo request.
- * Used to copy the payload data from the request into the reply */
+/******************************************************************* 
+ *  Called when router receives an ICMP echo request.
+ *  Used to copy the payload data from the request into the reply 
+ *******************************************************************/
 void copy_echo_data(struct packet_state *ps)
 {
 	ps->len -= sizeof(struct icmp_hdr);
@@ -168,7 +163,9 @@ void copy_echo_data(struct packet_state *ps)
 	}
 }
 
-/* Construct an ICMP header with the given type and code */
+/*******************************************************************
+*   Construct an ICMP header with the given type and code 
+*********************************************************************/
 struct icmp_hdr* create_icmp_hdr(struct packet_state *ps, unsigned int type, unsigned int code)
 {
 	struct icmp_hdr *res_head = (struct icmp_hdr *)ps->response;

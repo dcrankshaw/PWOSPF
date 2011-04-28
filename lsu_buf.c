@@ -2,9 +2,10 @@
  * Group name: jhugroup1
  * Members: Daniel Crankshaw, Maddie Stone, Adam Gross
  * CS344
- * 4/26/2011
+ * 4/29/2011
  **********************************************************************/
- #include <stdlib.h>
+ 
+#include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +21,9 @@
 #include "arp.h"
 #include "lsu_buf.h"
  
- 
+/*******************************************************************
+*  Adds a LSU packet to buff
+*******************************************************************/
  struct lsu_buf_ent* add_to_lsu_buff(struct lsu_buf_ent* buff, uint8_t* pack, uint16_t pack_len)
  {
     struct lsu_buf_ent* buf_walker=0;
@@ -48,6 +51,9 @@
     return buff;
  }
  
+/*******************************************************************
+*  Sends all LSUS in buff and then deletes all entries in buff and sets buff to NULL
+*******************************************************************/
  void send_all_lsus(struct lsu_buf_ent* buff, uint8_t* mac, char* iface, struct sr_instance* sr)
  {
     struct lsu_buf_ent* prev=buff;
@@ -65,7 +71,10 @@
     free(buff);
     buff=NULL;
  }
- 
+
+/*******************************************************************
+*  Deletes all LSU packets in buff
+*******************************************************************/
  void delete_all_lsu(struct lsu_buf_ent* buff)
  {
     struct lsu_buf_ent* prev=buff;

@@ -106,9 +106,6 @@ int pwospf_init(struct sr_instance* sr)
 	sr->ospf_subsys->last_seq_sent = 0;
 	sr->ospf_subsys->area_id = read_config(FILENAME); /* !!!! returns 0 if file read error !!!! */
 	sr->ospf_subsys->autype = 0;
-	/*sr->ospf_subsys->network = (struct adj_list*) malloc(sizeof(struct adj_list));
-	sr->ospf_subsys->network->rt = sr->ospf_subsys->this_router;
-	sr->ospf_subsys->network->next = 0;*/
 	print_topo(sr);
 
     /* -- start thread subsystem -- */
@@ -116,11 +113,8 @@ int pwospf_init(struct sr_instance* sr)
         perror("pthread_create");
         assert(0);
     }
-
     return 0; /* success */
 } /* -- pwospf_init -- */
-
-
 
 /*---------------------------------------------------------------------
  * Method: pwospf_lock
@@ -131,11 +125,8 @@ int pwospf_init(struct sr_instance* sr)
 
 void pwospf_lock(struct pwospf_subsys* subsys)
 {
-    //fprintf(stderr, "Pre-pwospf_lock\n");
     if ( pthread_mutex_lock(&subsys->lock) )
-    { assert(0); }
-   // fprintf(stderr, "Post-pwospf_lock\n");
-    
+    { assert(0); }    
 } /* -- pwospf_subsys -- */
 
 /*---------------------------------------------------------------------
@@ -147,10 +138,8 @@ void pwospf_lock(struct pwospf_subsys* subsys)
 
 void pwospf_unlock(struct pwospf_subsys* subsys)
 {
-  // fprintf(stderr, "Pre-pwospf_unlock\n");
    if ( pthread_mutex_unlock(&subsys->lock) )
     { assert(0); }
-   // fprintf(stderr, "Post-pwospf_unlock\n");
 } /* -- pwospf_subsys -- */
 
 /*---------------------------------------------------------------------
@@ -159,49 +148,35 @@ void pwospf_unlock(struct pwospf_subsys* subsys)
  * Main thread of pwospf subsystem.
  *
  *---------------------------------------------------------------------*/
-
 static
 void* pwospf_run_thread(void* arg)
 {
     struct sr_instance* sr = (struct sr_instance*)arg;
-	//fprintf(stderr, "REACHED OSPF SUBSYSTEM THREAD\n");
     while(1)
     {
         /* -- PWOSPF subsystem functionality should start  here! -- */
-
-        //int i;
-        /*
+        int i;
         for(i = 0; i < OSPF_DEFAULT_LSUINT; i += OSPF_DEFAULT_HELLOINT)
         {
-        	//fprintf(stderr, "This is where we send Hello packets\n");
         	send_HELLO(sr);
         	sleep(OSPF_DEFAULT_HELLOINT);
-        }*/
+        }
         /*Send LSU updates*/
         
-        
-       // fprintf(stderr, "This is where we send Hello packets\n");
-        send_HELLO(sr);
-        sleep(OSPF_DEFAULT_HELLOINT);
-        
-        //fprintf(stderr, "This is where we send LSU updates\n");
-        
         check_top_invalid(sr); /*Check for expired topo entries*/
-    	/*pwospf_lock(sr->ospf_subsys);
-    	print_nbr_list(sr);
-    	pwospf_unlock(sr->ospf_subsys);*/
     	send_lsu(sr);
-        sleep(OSPF_DEFAULT_HELLOINT); /*****For debugging *****/
-    };
+    }
 } /* -- run_ospf_thread -- */
 
-
+/*******************************************************************
+*  Handles PWOSPF packet. Checks that the OSPF header contains the valid version, checksum,
+*   Area ID, and Authorization Type. Then calls either handle_HELLO or handle_lsu based on packet
+*   type.
+*******************************************************************/
 int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
 {
-    //fprintf(stderr, "Got to handle_pwospf\n");
     ps->packet= ps->packet + sizeof(struct ip);
     struct ospfv2_hdr* pwospf_hdr=(struct ospfv2_hdr*)(ps->packet);
-    //fprintf(stderr, "Type: %u\n", pwospf_hdr->type);
     if(pwospf_hdr->version!=OSPF_V2)
     {
         fprintf(stderr, "Invalid version.\n");
@@ -235,12 +210,10 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     /* Now need to switch to the different hello and lsu pwospf */
     if(pwospf_hdr->type==OSPF_TYPE_HELLO)
     {
-        //fprintf(stderr, "Going to handle_hello\n");
         handle_HELLO(ps, ip_hdr);
     }
     else if(pwospf_hdr->type==OSPF_TYPE_LSU)
     {
-        //fprintf(stderr, "Going to handle_lsu\n");
         handle_lsu(pwospf_hdr, ps, ip_hdr);
     }
     else
@@ -252,7 +225,9 @@ int handle_pwospf(struct packet_state* ps, struct ip* ip_hdr)
     return 1;
 }
 
-
+/*******************************************************************
+*  Creates PWOSPF Interfaces based on sr_instance's interfaces.
+*******************************************************************/
 void create_pwospf_ifaces(struct sr_instance *sr)
 {
 	/* Called before any new threads are created */
@@ -292,6 +267,9 @@ void create_pwospf_ifaces(struct sr_instance *sr)
 
 }
 
+/*******************************************************************
+*  Reads configuration file.
+*******************************************************************/
 uint32_t read_config(const char* filename)
 {
 	FILE* fp = 0;

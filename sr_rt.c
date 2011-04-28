@@ -125,7 +125,7 @@ void sr_add_rt_entry(struct sr_instance* sr, struct in_addr dest,
 } /* -- sr_add_entry -- */
 
 /*--------------------------------------------------------------------- 
- * Method:
+ * Method: Prints routing table
  *
  *---------------------------------------------------------------------*/
 
@@ -153,7 +153,7 @@ void sr_print_routing_table(struct sr_instance* sr)
 } /* -- sr_print_routing_table -- */
 
 /*--------------------------------------------------------------------- 
- * Method:
+ * Method: Prints a routing table entry
  *
  *---------------------------------------------------------------------*/
 
