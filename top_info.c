@@ -301,15 +301,18 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
 	}
 	
 	/*TODO: check host's subnets. If any don't have a corresponding advertisement, delete.*/
-	fprintf(stderr, "Topology before checking for subnets to delete because of lack of advertisement.\n");
-	print_topo(sr);
-	/*if(time(NULL)> sr->ospf_subsys->init_time)
+	
+	if(time(NULL) > sr->ospf_subsys->init_time)
 	{
+	    fprintf(stderr, "Topology before checking for subnets to delete because of lack of advertisement.\n");
+	    print_topo(sr);
+	    
         int i;
         for(i=0; i< host->subnet_size; i++)
         {
             if(sub_in_adv(sr, advert_routes, host->subnets[i], num_ads)==0)
             {
+                fprintf(stderr, "******************************DELETING A TOP ENTRY!!!!*********************\n");
                 struct router* nbor = adj_list_contains(sr, host->subnets[i]->r_id);
                 remove_rt_sn_using_id(sr, host, host->subnets[i]->r_id);
                 
@@ -322,7 +325,7 @@ int add_to_top(struct sr_instance* sr, uint32_t host_rid, struct route** advert_
                 i--;
             }
         }
-    }*/
+    }
 	
 	fprintf(stderr, "Topology AFTER checking for subnets to delete because of lack of advertisement.\n");
 	print_topo(sr);
@@ -343,7 +346,7 @@ int sub_in_adv(struct sr_instance* sr, struct route** advs, struct route* route,
     int i;
     for(i=0; i< num_ads; i++)
     {
-        if(route_cmp(route, advs[i])==1)
+        if(route_cmp(route, advs[i])==0)
         {
             return 1;
         }

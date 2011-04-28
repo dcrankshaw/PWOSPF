@@ -54,6 +54,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
 			{                
                 if(iface->neighbors[i]->timenotvalid < time(NULL))
                 {
+                    fprintf(stderr, "*************************************************Do we get in here??\n");
                     uint32_t deleted_rid = iface->neighbors[i]->id;
                     free(iface->neighbors[i]); /*delete the entry*/
                     iface->neighbors[i] = NULL;
@@ -64,7 +65,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
                             /*we will still exit the for loop though if the deleted element was the last one*/
                             
                     /*TODO: delete adjacency adn subnet*/
-                   /* if(time(NULL)> ps->sr->ospf_subsys->init_time)
+                   if(time(NULL)> ps->sr->ospf_subsys->init_time)
                     {
                         remove_rt_sn_using_id(ps->sr, ps->sr->ospf_subsys->this_router, deleted_rid);
                         struct router* nbor = adj_list_contains(ps->sr, deleted_rid);
@@ -74,7 +75,7 @@ void handle_HELLO(struct packet_state* ps, struct ip* ip_hdr)
                             remove_rt_adj_using_id(ps->sr, nbor, ps->sr->ospf_subsys->this_router->rid);
                             remove_rt_adj_using_id(ps->sr, ps->sr->ospf_subsys->this_router, nbor->rid);
                         }
-                    }*/
+                    }
                }	
 			}
 			
