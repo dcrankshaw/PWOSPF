@@ -5,63 +5,27 @@ Group 1
       Dan Crankshaw
       Maddie Stone
       Adam Gross
-      
-      
-Add a note to the final writeup about efficiency and implementation writeups
 
-DONE?
--read in static routing table --> This is the routing table from the simple router
--*need to make sure everything (e.g. pwospf_iface) is initialized in pwospf_init()
--Handle default gateways (i.e. to the internet) - will be handled in the static routes
--update get_routing_if() in sr_router.c to first check dynamic forwarding table, then static one
--add router when we get an advert about one we don't know about (decide what exactly to put in the
- properties of the router, and will this affect Dijkstra's at all)
- 		-add check to make sure that router's with same subnet don't advertise different neighbors
- 		 (*see better comment in the code)
--I think I still need to update the LSUTIMEOUT's of each route struct when I add to them
-	-also need to check whether they are expired or not probably
--write set and get sequence methods
--handle ospf packets (in sr_router.c) - method stub is there, it just needs to be written
--decide when we have an invalid link
--drop LSU packets
--create and read in config file (with router id, area id, etc.)
-	-make sure that all struct pwospf_subsys variable are initialized in pwospf_init()
-	-all threading
-	-including possibly ARP
--buffering LSU packets
--finish ospf_subsystem initialization
+LSU's:
+    The Link State Updates are sent every OSPF_DEFAULT_LSUINT seconds. The LSU includes 
+    advertisements for each of its subnets' that are known to have a neighbor router connected,
+    as well as all of the static routes.
+HELLO's: 
+    Hello packets are sent every OSPF_DEFAULT_HELLOINT seconds. 
+    
+The topology is given TOP_INITIALIZATION (in sr_pwospf.h) seconds to initialize before any subnets 
+are deleted. After TOP_INITIALIZATION seconds, subnets and adjacencies are deleted based on 
+the absence of advertisements are HELLO packets.
 
-
-
-TODO:
-
-
--comment out __attribute-- ((packed)) for structs that don't need them?????
-
--find out what entries need to be in static routing table. Rtable's must have at least 1 entry
- 
--probably some other stuff too
-
-
-Notes:
-
-This is so we each have a section of the README to pose questions to each other, add notes about
-our particular pieces of code, etc. Only delete things from your section.
-
-Dan:
--Check_top_invalid for some reason is not working - gives us segfaults
-		***COMMENTED OUT RIGHT NOW***
-		**Check top invalid made if statement of 1==0
--Create static routing tables for vhost 2 and 3 that will mirror entries in the dynamic routing table
--conditional wait for LSU packets (so that we send packets every LSUINT seconds AND whenever we
- get a change to the link state update- p_thread_cond_wait()
-
-Maddie:
---TEST FORWARDING--Commented out right now.
---Are ARP Replies correctly being added to cache
---- We seem to be adding multiple requests for the same dest to arpq
-
-
+When a MAC address is needed for a packet and not in the ARP cache, get_mac_address is called. 
+This creates an arpq entry that is added to sr->pending if it doesn't already exist. This entry 
+contains the associated IP address, the constructed ARP request, a buffer for non-LSU packets, and 
+a buffer for just LSU packets. When ARP requests need to be sent, a new thread is started for
+each IP address that we're looking for a MAC for. Every 5 seconds, if the entry is not in the cache,
+another ARP is sent. If the entry is in the cache, all of the packets in both buffers are sent, 
+the thread is terminated, and the num requests is resent. If 5 requests are sent with no reply 
+received, a ICMP Host Unreachable is sent for all packets in the packet buffer and the LSU's 
+in the LSU buffer are all dropped. The thread is then terminated.
 
 
 
