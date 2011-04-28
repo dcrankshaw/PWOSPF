@@ -348,18 +348,28 @@ void add_to_existing_router(struct sr_instance *sr, struct route **routes, struc
 		int i;
 		for(i = 0; i < num_ads; i++)
 		{
+		    /** Print route */
+		    fprintf(stderr, "Route received in Advertisement!! --------------------------\n");
+		    fprintf(stderr, "Prefix: %s ", inet_ntoa(routes[i]->prefix));
+		    fprintf(stderr, "Mask: %s ", inet_ntoa(routes[i]->mask));
+		    struct in_addr rid_to_print;
+		    rid_to_print.s_addr=routes[i]->r_id;
+		    fprintf(stderr, "Mask: %s \n", inet_ntoa(rid_to_print));
+		
 		
 			/*If this does not already exist in the host's subnets*/
 			if(router_contains(routes[i], host) == 0)
 			{
+				
 				/*Adds route to host's subnets */
 				add_new_route(sr, routes[i], host);
 			}	
-				/*If the router contains subnets that aren't advertised any more, we need to delete those subnets and adjacencies*/
+			/*TODO: If the router contains subnets that aren't advertised any more, we need to delete those subnets and adjacencies*/
 			
             /*Check if con_router already exists in topology*/
             if(routes[i]->r_id != 0)
             {
+            
                 struct router* con_router=adj_list_contains(sr, routes[i]->r_id);
                 if(con_router==NULL)
                 {
